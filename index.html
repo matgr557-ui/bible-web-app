@@ -13,27 +13,11 @@
     </script>
 
     <style>
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        @keyframes slideInFromTop {
-            from { transform: translate(-50%, -100%); opacity: 0; }
-            to { transform: translate(-50%, 0); opacity: 1; }
-        }
-        @keyframes slideInFromBottom {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-        }
-        @keyframes slideInFromBottom4 {
-            from { transform: translateY(1rem); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-        .animate-in {
-            animation-duration: 250ms;
-            animation-fill-mode: both;
-            animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideInFromTop { from { transform: translate(-50%, -100%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+        @keyframes slideInFromBottom { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes slideInFromBottom4 { from { transform: translateY(1rem); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .animate-in { animation-duration: 250ms; animation-fill-mode: both; animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
         .fade-in { animation-name: fadeIn; }
         .slide-in-from-top { animation-name: slideInFromTop; }
         .slide-in-from-bottom { animation-name: slideInFromBottom; }
@@ -47,12 +31,22 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest" crossorigin></script>
     
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin></script>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+
+    <div id="error-display-catcher" style="display:none; color:#b91c1c; background-color:#fee2e2; padding:16px; margin:16px; border-radius:12px; font-family:monospace; font-size:13px; border:1px solid #fca5a5; z-index:99999; position:relative; white-space:pre-wrap;"></div>
+    <script>
+        window.addEventListener('error', function(e) {
+            var box = document.getElementById('error-display-catcher');
+            if (box) {
+                box.style.display = 'block';
+                box.innerText += '\n❌ 執行階段出錯: ' + e.message + '\n📍 位置: ' + e.filename + ' (第 ' + e.lineno + ' 行)';
+            }
+        });
+    </script>
 
     <div id="root"></div>
 
@@ -60,51 +54,80 @@
         // 解構 React 常用 Hooks
         const { useState, useEffect, useCallback, Fragment } = React;
         
-        // --- 安全圖標防崩潰引擎 ---
-        const getSafeIcon = (iconName) => {
-            const fallbackComponent = (props) => (
-                <span {...props} className={`inline-block text-center font-bold ${props.className || ''}`} style={{ width: '1em', height: '1em', lineHeight: '1' }}>▪</span>
+        // --- 🚀 自創極速安全圖標渲染引擎 (代替容易崩潰的 lucide-react) ---
+        const LucideIcon = ({ name, className = '', size = 20, strokeWidth = 2, ...props }) => {
+            // 自動將大寫命名轉為 kebab-case (如 ChevronDown -> chevron-down)
+            const kebabName = name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+            
+            // 從原生庫中撈取圖標節點資料
+            let iconData = window.lucide?.icons?.[kebabName] || window.lucide?.icons?.[name];
+            
+            // 安全防撞墊：如果找不到特定圖標（可能版本問題），進行智慧替代
+            if (!iconData && (kebabName === 'loader-circle' || kebabName === 'loader' || kebabName === 'loader2')) {
+                iconData = window.lucide?.icons?.['loader-circle'] || window.lucide?.icons?.['loader'] || window.lucide?.icons?.['refresh-cw'];
+            }
+            if (!iconData && kebabName === 'bookmark-check') {
+                iconData = window.lucide?.icons?.['bookmark'];
+            }
+            
+            // 終極備用：如果連底層庫都沒載入，渲染一個優雅的小正方形，確保整隻 App 絕對不死機
+            if (!iconData) {
+                return <span className={`inline-block text-center text-slate-400 ${className}`} style={{ width: size, height: size, lineHeight: 1 }}>▪</span>;
+            }
+
+            return (
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width={size}
+                    height={size}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={strokeWidth}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={`lucide lucide-${kebabName} ${className}`}
+                    {...props}
+                >
+                    {iconData.map((node, idx) => {
+                        const [tag, attrs] = node;
+                        // 將 HTML 屬性（如 stroke-width）轉化為 React 格式（如 strokeWidth）
+                        const reactAttrs = {};
+                        Object.keys(attrs).forEach(key => {
+                            const camelKey = key.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                            reactAttrs[camelKey] = attrs[key];
+                        });
+                        const Tag = tag;
+                        return <Tag key={idx} {...reactAttrs} />;
+                    })}
+                </svg>
             );
-            
-            // 兼容大小寫全域變數
-            const lucideLib = window.LucideReact || window.lucideReact || window.lucide;
-            if (!lucideLib) return fallbackComponent;
-            
-            // 核心更名對應邏輯
-            if (iconName === 'Loader2' || iconName === 'Loader') {
-                return lucideLib.LoaderCircle || lucideLib.Loader2 || lucideLib.Loader || lucideLib.RefreshCw || fallbackComponent;
-            }
-            if (iconName === 'CheckCircle2' || iconName === 'Check') {
-                return lucideLib.CheckCircle || lucideLib.Check || lucideLib.CheckCircle2 || fallbackComponent;
-            }
-            
-            return lucideLib[iconName] || fallbackComponent;
         };
 
-        // 動態且安全地載入所有需要的圖標
-        const Search = getSafeIcon('Search');
-        const Book = getSafeIcon('Book');
-        const Menu = getSafeIcon('Menu');
-        const ChevronDown = getSafeIcon('ChevronDown');
-        const Bookmark = getSafeIcon('Bookmark');
-        const X = getSafeIcon('X');
-        const Home = getSafeIcon('Home');
-        const Layers = getSafeIcon('Layers');
-        const Loader = getSafeIcon('Loader'); // 自動轉化為 LoaderCircle
-        const Sparkles = getSafeIcon('Sparkles');
-        const Columns = getSafeIcon('Columns');
-        const List = getSafeIcon('List');
-        const ChevronLeft = getSafeIcon('ChevronLeft');
-        const ChevronsLeft = getSafeIcon('ChevronsLeft');
-        const ChevronsRight = getSafeIcon('ChevronsRight');
-        const AlignLeft = getSafeIcon('AlignLeft');
-        const AlignJustify = getSafeIcon('AlignJustify');
-        const Check = getSafeIcon('Check'); // 自動轉化為 CheckCircle / Check
-        const BookmarkCheck = getSafeIcon('BookmarkCheck');
-        const Sun = getSafeIcon('Sun');
-        const Moon = getSafeIcon('Moon');
-        const Database = getSafeIcon('Database');
-        const BookOpen = getSafeIcon('BookOpen');
+        // 為舊代碼封裝對應元件，唔使大改任何 JSX 邏輯！
+        const Search = (p) => <LucideIcon name="search" {...p} />;
+        const Book = (p) => <LucideIcon name="book" {...p} />;
+        const Menu = (p) => <LucideIcon name="menu" {...p} />;
+        const ChevronDown = (p) => <LucideIcon name="chevron-down" {...p} />;
+        const Bookmark = (p) => <LucideIcon name="bookmark" {...p} />;
+        const X = (p) => <LucideIcon name="x" {...p} />;
+        const Home = (p) => <LucideIcon name="home" {...p} />;
+        const Layers = (p) => <LucideIcon name="layers" {...p} />;
+        const Loader = (p) => <LucideIcon name="loader-circle" className={`animate-spin ${p.className || ''}`} {...p} />;
+        const Sparkles = (p) => <LucideIcon name="sparkles" {...p} />;
+        const Columns = (p) => <LucideIcon name="columns" {...p} />;
+        const List = (p) => <LucideIcon name="list" {...p} />;
+        const ChevronLeft = (p) => <LucideIcon name="chevron-left" {...p} />;
+        const ChevronsLeft = (p) => <LucideIcon name="chevrons-left" {...p} />;
+        const ChevronsRight = (p) => <LucideIcon name="chevrons-right" {...p} />;
+        const AlignLeft = (p) => <LucideIcon name="align-left" {...p} />;
+        const AlignJustify = (p) => <LucideIcon name="align-justify" {...p} />;
+        const Check = (p) => <LucideIcon name="check" {...p} />;
+        const BookmarkCheck = (p) => <LucideIcon name="bookmark" {...p} />; // 自動安全對應
+        const Sun = (p) => <LucideIcon name="sun" {...p} />;
+        const Moon = (p) => <LucideIcon name="moon" {...p} />;
+        const Database = (p) => <LucideIcon name="database" {...p} />;
+        const BookOpen = (p) => <LucideIcon name="book-open" {...p} />;
 
         // --- 聖經目錄結構定義 ---
         const BIBLE_STRUCTURE = {
@@ -121,7 +144,7 @@
             { name: '詩篇', en: 'Psalms', abbr: 'Psa', chapters: 150, id: 'PSA' }, { name: '箴言', en: 'Proverbs', abbr: 'Pro', chapters: 31, id: 'PRO' },
             { name: '傳道書', en: 'Ecclesiastes', abbr: 'Ecc', chapters: 12, id: 'ECC' }, { name: '雅歌', en: 'Song of Solomon', abbr: 'Sng', chapters: 8, id: 'SNG' },
             { name: '以賽亞書', en: 'Isaiah', abbr: 'Isa', chapters: 66, id: 'ISA' }, { name: '耶利米書', en: 'Jeremiah', abbr: 'Jer', chapters: 52, id: 'JER' },
-            { name: '耶利米哀歌', en: 'Lamentations', abbr: 'Lam', chapters: 5, id: 'LAM' }, { name: '以西結書', en: 'Ezekiel', abbr: 'Ezk', chapters: 48, id: 'EZK' },
+            { name: '耶利米哀歌', en: 'Lamentations', font: 'Lam', chapters: 5, id: 'LAM' }, { name: '以西結書', en: 'Ezekiel', abbr: 'Ezk', chapters: 48, id: 'EZK' },
             { name: '但以理書', en: 'Daniel', abbr: 'Dan', chapters: 12, id: 'DAN' }, { name: '何西阿書', en: 'Hosea', abbr: 'Hos', chapters: 14, id: 'HOS' },
             { name: '約珥書', en: 'Joel', abbr: 'Joe', chapters: 3, id: 'JOL' }, { name: '阿摩司書', en: 'Amos', abbr: 'Amo', chapters: 9, id: 'AMO' },
             { name: '俄巴底亞書', en: 'Obadiah', abbr: 'Oba', chapters: 1, id: 'OBA' }, { name: '約拿書', en: 'Jonah', abbr: 'Jon', chapters: 4, id: 'JON' },
@@ -137,7 +160,7 @@
             { name: '哥林多前書', en: '1 Corinthians', abbr: '1Co', chapters: 16, id: '1CO' }, { name: '哥林多後書', en: '2 Corinthians', abbr: '2Co', chapters: 13, id: '2CO' },
             { name: '加拉太書', en: 'Galatians', abbr: 'Gal', chapters: 6, id: 'GAL' }, { name: '以弗所書', en: 'Ephesians', abbr: 'Eph', chapters: 6, id: 'EPH' },
             { name: '腓立比書', en: 'Philippians', abbr: 'Php', chapters: 4, id: 'PHL' }, { name: '歌羅西書', en: 'Colossians', abbr: 'Col', chapters: 4, id: 'COL' },
-            { name: '帖撒羅尼迦前書', en: '1 Testament', abbr: '1Th', chapters: 5, id: '1TH' }, { name: '帖撒羅尼迦後書', en: '2 Testament', abbr: '2Th', chapters: 3, id: '2TH' },
+            { name: '帖撒羅尼迦前書', en: '1 Thessalonians', abbr: '1Th', chapters: 5, id: '1TH' }, { name: '帖撒羅尼迦後書', en: '2 Thessalonians', abbr: '2Th', chapters: 3, id: '2TH' },
             { name: '提摩太前書', en: '1 Timothy', abbr: '1Ti', chapters: 6, id: '1TI' }, { name: '提摩太後書', en: '2 Timothy', abbr: '2Ti', chapters: 4, id: '2TI' },
             { name: '提多書', en: 'Titus', abbr: 'Tit', chapters: 3, id: 'TIT' }, { name: '腓利門書', en: 'Philemon', abbr: 'Phm', chapters: 1, id: 'PHM' },
             { name: '希伯來書', en: 'Hebrews', abbr: 'Heb', chapters: 13, id: 'HEB' }, { name: '雅各書', en: 'James', abbr: 'Jas', chapters: 5, id: 'JAS' },
@@ -427,7 +450,7 @@
                 let wlc = loadedBibles['orig-wlc']?.[viewState.bookId]?.[viewState.chapter]?.[i];
                 
                 if (isDemo && viewState.bookId === 'GEN' && viewState.chapter === 1) {
-                    if (i === 1) { cuv = "起初，神創造天地。"; wlc = "בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַ神與 וְאֵת הָאָרֶץ"; }
+                    if (i === 1) { cuv = "起初，神創造天地。"; wlc = "בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַשָּׁמַיִם וְאֵת הָאָרֶץ"; }
                     if (i === 2) cuv = "地是空虛混沌，淵面黑暗；神的靈運行在水面上。";
                 }
 
@@ -566,7 +589,7 @@
           return (
             <div className="h-[100dvh] flex flex-col overflow-hidden transition-colors duration-300 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
               
-              {/* Toast */}
+              {/* Toast 提示浮窗 */}
               {toastMsg && (
                 <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[200] bg-indigo-600 dark:bg-indigo-500 text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg animate-in slide-in-from-top fade-in flex items-center gap-2">
                     <Check className="w-4 h-4" /> {toastMsg} 
@@ -780,7 +803,7 @@
                                             <span style={{ fontSize: `${fontSize}px` }} className="text-slate-800 dark:text-slate-200 font-medium leading-relaxed flex-1">{getVerseText(v, readVersion)}</span>
                                          )}
                                          <button onClick={() => toggleBookmark(v)} className={`ml-2 p-1 rounded-full shrink-0 transition-colors ${isBookmarked(v.verseNum) ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' : 'text-slate-200 dark:text-slate-600 hover:text-amber-400'}`}>
-                                            {isBookmarked(v.verseNum) ? <BookmarkCheck className="w-4 h-4"/> : <Bookmark className="w-4 h-4"/>}
+                                            {isBookmarked(v.verseNum) ? <LucideIcon name="bookmark-check" className="w-4 h-4"/> : <Bookmark className="w-4 h-4"/>}
                                          </button>
                                       </div>
                                    </div>
@@ -789,7 +812,7 @@
                              ) : (
                                <>
                                  {verses.map((v, idx) => (
-                                   <React.Fragment key={v.verseNum}>
+                                   <Fragment key={v.verseNum}>
                                       {(v.paragraphStart && idx !== 0) && <div className="w-full h-1.5 flex shrink-0"></div>}
                                       <span className="inline">
                                          <span className="text-indigo-500 dark:text-indigo-400 font-black mx-1 text-[11px] cursor-pointer hover:bg-indigo-100 px-1.5 py-0.5 rounded relative bottom-[2px]">{v.verseNum}</span>
@@ -797,10 +820,10 @@
                                             <span style={{ fontSize: `${fontSize}px` }} className="text-slate-800 dark:text-slate-200 font-medium leading-loose">{getVerseText(v, readVersion)}</span>
                                          )}
                                          <button onClick={() => toggleBookmark(v)} className={`inline-flex align-middle mx-1 -mt-1 transition-colors ${isBookmarked(v.verseNum) ? 'text-amber-500' : 'text-slate-200 dark:text-slate-600 hover:text-amber-400'}`}>
-                                            {isBookmarked(v.verseNum) ? <BookmarkCheck className="w-3.5 h-3.5"/> : <Bookmark className="w-3.5 h-3.5"/>}
+                                            {isBookmarked(v.verseNum) ? <LucideIcon name="bookmark-check" className="w-3.5 h-3.5"/> : <Bookmark className="w-3.5 h-3.5"/>}
                                          </button>
                                       </span>
-                                   </React.Fragment>
+                                   </Fragment>
                                  ))}
                                </>
                              )}
@@ -819,7 +842,7 @@
                              <div className="px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
                                 <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Verse {verse.verseNum}</span>
                                 <button onClick={() => toggleBookmark(verse)} className={isBookmarked(verse.verseNum) ? 'text-amber-500' : 'text-slate-300 dark:text-slate-600 hover:text-amber-400'}>
-                                   {isBookmarked(verse.verseNum) ? <BookmarkCheck className="w-4 h-4"/> : <Bookmark className="w-4 h-4"/>}
+                                   {isBookmarked(verse.verseNum) ? <LucideIcon name="bookmark-check" className="w-4 h-4"/> : <Bookmark className="w-4 h-4"/>}
                                 </button>
                              </div>
                              <div className="p-4 sm:p-5">
