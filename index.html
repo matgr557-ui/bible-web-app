@@ -62,12 +62,12 @@
             'moon': <Fragment><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></Fragment>,
             'database': <Fragment><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></Fragment>,
             'book-open': <Fragment><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></Fragment>,
-            'settings': <Fragment><path d="M12.22 2h-.44a2 2 0 0 0-2 2l-.2.1a2 2 0 0 1-2.81.25l-.17-.1a2 2 0 0 0-2.81.14l-.31.31a2 2 0 0 0 .14 2.81l.1.17a2 2 0 0 1-.25 2.81l-.1.2a2 2 0 0 0-2 2v.44a2 2 0 0 0 2 2l.1.2a2 2 0 0 1 .25 2.81l-.1.17a2 2 0 0 0-.14 2.81l.31.31a2 2 0 0 0 2.81-.14l.17-.1a2 2 0 0 1 2.81-.25l.2.1a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2l.2-.1a2 2 0 0 1 2.81-.25l.17.1a2 2 0 0 0 2.81-.14l.31-.31a2 2 0 0 0-.14-2.81l-.1-.17a2 2 0 0 1 .25-2.81l.1-.2a2 2 0 0 0 2 2v-.44a2 2 0 0 0-2-2l-.1-.2a2 2 0 0 1-.25-2.81l.1-.17a2 2 0 0 0 .14-2.81l-.31-.31a2 2 0 0 0-2.81.14l-.17.1a2 2 0 0 1-2.81.25l-.2-.1a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></Fragment>
+            'settings': <Fragment><path d="M12.22 2h-.44a2 2 0 0 0-2 2l-.2.1a2 2 0 0 1-2.81.25l-.17-.1a2 2 0 0 0-2.81.14l-.31.31a2 2 0 0 0 .14 2.81l.1.17a2 2 0 0 1-.25 2.81l-.1.2a2 2 0 0 0-2 2v.44a2 2 0 0 0 2 2l.1.2a2 2 0 0 1 .25 2.81l-.1.17a2 2 0 0 0-.14 2.81l.31.31a2 2 0 0 0 2.81-.14l.17-.1a2 2 0 0 1 2.81-.25l.2.1a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2l.2-.1a2 2 0 0 1 2.81-.25l.17.1a2 2 0 0 0 2.81-.14l.31-.31a2 2 0 0 0-.14-2.81l-.1-.17a2 2 0 0 1 .25-2.81l.1-.2a2 2 0 0 0 2-2v-.44a2 2 0 0 0-2-2l-.1-.2a2 2 0 0 1-.25-2.81l.1-.17a2 2 0 0 0 .14-2.81l-.31-.31a2 2 0 0 0-2.81.14l-.17.1a2 2 0 0 1-2.81.25l-.2-.1a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></Fragment>
         };
 
         const LucideIcon = ({ name, className = '', size = 20, strokeWidth = 2, ...props }) => {
             const path = ICON_PATHS[name];
-            if (!path) return <span className={`inline-block text-slate-400 ${className}`} style={{ width: size, height: size }}>▪</span>;
+            if (!path) return <span className="inline-block text-slate-400" style={{ width: size, height: size }}>▪</span>;
             return (
                 <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={`${className}`} {...props}>
                     {path}
@@ -136,7 +136,7 @@
             { name: '提摩太前書', en: '1 Timothy', abbr: '1Ti', chapters: 6, id: '1TI' }, { name: '提摩太後書', en: '2 Timothy', abbr: '2Ti', chapters: 4, id: '2TI' },
             { name: '提多書', en: 'Titus', abbr: 'Tit', chapters: 3, id: 'TIT' }, { name: '腓利門書', en: 'Philemon', abbr: 'Phm', chapters: 1, id: 'PHM' },
             { name: '希伯來書', en: 'Hebrews', abbr: 'Heb', chapters: 13, id: 'HEB' }, { name: '雅各書', en: 'James', abbr: 'Jas', chapters: 5, id: 'JAS' },
-            { name: '彼得前書', en: '1 Peter', abbr: '1Pe', chapters: 5, id: '1PE' }, { name: '彼得後書', en: '2 Peter', abbr: '2Pe', chapters: 3, id: '2PE' },
+            { name: '彼得前書', d: '1 Peter', abbr: '1Pe', chapters: 5, id: '1PE' }, { name: '彼得後書', en: '2 Peter', abbr: '2Pe', chapters: 3, id: '2PE' },
             { name: '約翰一書', en: '1 John', abbr: '1Jn', chapters: 5, id: '1JO' }, { name: '約翰二書', en: '2 John', abbr: '2Jn', chapters: 1, id: '2JO' },
             { name: '約翰三書', en: '3 John', abbr: '3Jn', chapters: 1, id: '3JO' }, { name: '猶大書', en: 'Jude', abbr: 'Jud', chapters: 1, id: 'JUD' },
             { name: '啟示錄', en: 'Revelation', abbr: 'Rev', chapters: 22, id: 'REV' }
@@ -368,7 +368,7 @@
                 let cuv = loadedBibles['zh-cuv']?.[viewState.bookId]?.[viewState.chapter]?.[i];
                 let wlc = loadedBibles['orig-wlc']?.[viewState.bookId]?.[viewState.chapter]?.[i];
                 if (isDemo && viewState.bookId === 'GEN' && viewState.chapter === 1) {
-                    if (i === 1) { cuv = "起初，神創造天地。"; wlc = "בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַשָּׁמַיִם وְאֵ特 הָאָרֶץ"; }
+                    if (i === 1) { cuv = "起初，神創造天地。"; wlc = "בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַشָּׁמַיִם וְאֵת הָאָרֶץ"; }
                     if (i === 2) cuv = "地是空虛混沌，淵面黑暗；神的靈運行在水面上。";
                 }
                 newVerses.push({
@@ -460,13 +460,13 @@
               if (!text || text.startsWith('[')) return <span style={{ fontSize: `${fs}px` }} className="text-slate-400 font-medium">尚未匯入</span>;
               const isHebrew = config === 'orig-wlc'; const words = text.split(/\s+/).filter(w => w); const dir = isHebrew ? 'rtl' : 'ltr';
               const renderedWords = words.map((w, i) => (
-                  <span key={i} onClick={() => handleWordClick(w)} className="inline-flex flex-col items-center cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded p-1 transition-colors group">
+                  <span key={i} onClick={() => handleWordClick(w)} className="inline-flex flex-col items-center cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded px-0.5 py-1 transition-colors group">
                     <span style={{ fontSize: `${fs}px` }} className={`font-bold leading-none ${v.isOT ? 'text-indigo-900 dark:text-indigo-300' : 'text-emerald-900 dark:text-emerald-300'}`}>{w}</span>
-                    <span className="text-[10px] text-amber-800 dark:text-amber-500 italic mt-1 leading-none" dir="ltr">{autoTransliterate(w, isHebrew)}</span>
+                    <span className="text-[9px] text-amber-800 dark:text-amber-500 italic mt-0.5 leading-none" dir="ltr">{autoTransliterate(w, isHebrew)}</span>
                   </span>
               ));
               if (isParagraphMode) return <span className="inline-flex flex-wrap gap-x-1.5 gap-y-1 align-bottom mx-1" dir={dir}>{renderedWords}</span>;
-              return <div className={`flex flex-wrap gap-x-2 gap-y-3 content-start flex-1 ${dir === 'rtl' ? 'justify-start' : ''}`} dir={dir}>{renderedWords}</div>;
+              return <div className={`flex flex-wrap gap-x-1 gap-y-2 content-start flex-1 ${dir === 'rtl' ? 'justify-start' : ''}`} dir={dir}>{renderedWords}</div>;
           };
 
           if (!appReady) return (
@@ -714,6 +714,7 @@
                              </div>
                              <div className="p-4 sm:p-5">
                                 {layoutMode === 'vertical' ? (
+                                   /* 1. 上中下直排模式 */
                                    <div className="space-y-4">
                                       {verticalSlots.map((slot, sIdx) => (
                                          <div key={sIdx} className={sIdx > 0 ? "pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-2" : "flex flex-col sm:flex-row gap-2"}>
@@ -733,30 +734,37 @@
                                       ))}
                                    </div>
                                 ) : (
-                                   <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr] gap-4">
-                                      <div className="border-b sm:border-b-0 sm:border-r border-slate-200 dark:border-slate-800 pb-3 sm:pb-0 sm:pr-3 flex flex-col">
-                                         <div className="mb-3 inline-block">
-                                            <select value={horizVersions.zh} onChange={e => setHorizVersions({...horizVersions, zh: e.target.value})} className="text-[10px] font-black text-slate-500 bg-slate-100 dark:bg-slate-800 rounded py-1 pl-2 pr-2 outline-none cursor-pointer">
+                                   /* 2. 🔥 完美修復版：手機強制左中右完美分欄模式 */
+                                   <div className="grid grid-cols-3 gap-2 min-w-0 w-full overflow-hidden">
+                                      {/* 左欄：中文 */}
+                                      <div className="border-r border-slate-100 dark:border-slate-800 pr-1.5 flex flex-col min-w-0">
+                                         <div className="mb-2 shrink-0">
+                                            <select value={horizVersions.zh} onChange={e => setHorizVersions({...horizVersions, zh: e.target.value})} className="text-[9px] font-black text-slate-500 bg-slate-100 dark:bg-slate-800 rounded py-0.5 px-1 outline-none cursor-pointer max-w-full truncate">
                                                <option value="cuv">和合本</option><option value="lzz">呂振中</option><option value="ncv">新譯本</option>
                                             </select>
                                          </div>
-                                         <p style={{ fontSize: `${fontSize}px` }} className="font-bold text-slate-800 dark:text-slate-200 leading-relaxed">{verse.chinese[horizVersions.zh] || "尚未匯入"}</p>
+                                         {/* 橫向模式自動自適應降噪縮小 3px，防止字體過大擠壓 */}
+                                         <p style={{ fontSize: `${Math.max(11, fontSize - 3)}px` }} className="font-bold text-slate-800 dark:text-slate-200 leading-relaxed break-all">{verse.chinese[horizVersions.zh] || "尚未匯入"}</p>
                                       </div>
-                                      <div className="border-b sm:border-b-0 sm:border-r border-slate-200 dark:border-slate-800 pb-3 sm:pb-0 sm:pr-3 flex flex-col">
-                                         <div className="mb-3 inline-block">
-                                            <select value={horizVersions.en} onChange={e => setHorizVersions({...horizVersions, en: e.target.value})} className="text-[10px] font-black text-slate-500 bg-slate-100 dark:bg-slate-800 rounded py-1 pl-2 pr-2 outline-none cursor-pointer">
+                                      
+                                      {/* 中欄：英文 */}
+                                      <div className="border-r border-slate-100 dark:border-slate-800 pr-1.5 flex flex-col min-w-0">
+                                         <div className="mb-2 shrink-0">
+                                            <select value={horizVersions.en} onChange={e => setHorizVersions({...horizVersions, en: e.target.value})} className="text-[9px] font-black text-slate-500 bg-slate-100 dark:bg-slate-800 rounded py-0.5 px-1 outline-none cursor-pointer max-w-full truncate">
                                                <option value="niv">NIV</option><option value="nasb">NASB</option><option value="kjv">KJV</option>
                                             </select>
                                          </div>
-                                         <p style={{ fontSize: `${fontSize}px` }} className="italic font-serif text-slate-600 dark:text-slate-400 leading-relaxed">{verse.english[horizVersions.en] || "尚未匯入"}</p>
+                                         <p style={{ fontSize: `${Math.max(11, fontSize - 3)}px` }} className="italic font-serif text-slate-600 dark:text-slate-400 leading-relaxed break-all">{verse.english[horizVersions.en] || "尚未匯入"}</p>
                                       </div>
-                                      <div className="flex flex-col">
-                                         <div className="mb-3 inline-block">
-                                            <select value={horizVersions.orig} onChange={e => setHorizVersions({...horizVersions, orig: e.target.value})} className="text-[10px] font-black text-amber-600 bg-amber-50 dark:bg-amber-900/20 rounded py-1 pl-2 pr-2 outline-none cursor-pointer">
-                                               <option value="orig-wlc">WLC 希伯來文</option><option value="orig-lxx">LXX 七十士</option><option value="orig-na28">NA28 新約</option>
+                                      
+                                      {/* 右欄：原文 */}
+                                      <div className="flex flex-col min-w-0">
+                                         <div className="mb-2 shrink-0">
+                                            <select value={horizVersions.orig} onChange={e => setHorizVersions({...horizVersions, orig: e.target.value})} className="text-[9px] font-black text-amber-600 bg-amber-50 dark:bg-amber-900/20 rounded py-0.5 px-1 outline-none cursor-pointer max-w-full truncate">
+                                               <option value="orig-wlc">WLC 希伯來</option><option value="orig-lxx">LXX 七十士</option><option value="orig-na28">NA28 新約</option>
                                             </select>
                                          </div>
-                                         <div className="w-full">{renderOriginal(verse, horizVersions.orig, fontSize, false)}</div>
+                                         <div className="w-full min-w-0 break-all">{renderOriginal(verse, horizVersions.orig, Math.max(11, fontSize - 3), false)}</div>
                                       </div>
                                    </div>
                                 )}
@@ -890,7 +898,7 @@
                     </div>
                  )}
 
-                 {/* 浮動導航列 (已同步上移至 bottom-[105px]，完美防撞欄) */}
+                 {/* 浮動導航列 */}
                  {(activeTab === 'read' || activeTab === 'compare') && !fetching && (
                     <div className="fixed bottom-[105px] left-0 right-0 px-4 max-w-lg mx-auto z-40">
                        <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 p-1.5 rounded-2xl shadow-lg flex gap-1.5">
@@ -913,7 +921,7 @@
                  )}
               </main>
 
-              {/* 底部五向主導航列 (優化：pt-2.5 pb-9 打通 Android 底部安全隔離區) */}
+              {/* 底部五向主導航列 */}
               <nav className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 pt-2.5 pb-9 grid grid-cols-5 sticky bottom-0 z-50 shadow-[0_-10px_20px_rgba(0,0,0,0.03)] shrink-0">
                  <TabButton active={activeTab === 'home'} onClick={() => setActiveTab('home')} icon={<Home className="w-5 h-5" />} label="主頁" />
                  <TabButton active={activeTab === 'read'} onClick={() => setActiveTab('read')} icon={<Book className="w-5 h-5" />} label="讀經" />
