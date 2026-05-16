@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bible Explorer - 聖經原文對照探索器</title>
     
-    <script src="https://cdn.tailwindcss.com" crossorigin></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -13,15 +13,33 @@
     </script>
 
     <style>
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideInFromTop { from { transform: translate(-50%, -100%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
-        @keyframes slideInFromBottom { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        @keyframes slideInFromBottom4 { from { transform: translateY(1rem); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .animate-in { animation-duration: 250ms; animation-fill-mode: both; animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideInFromTop {
+            from { transform: translate(-50%, -100%); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
+        @keyframes slideInFromBottom {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        @keyframes slideInFromBottom4 {
+            from { transform: translateY(1rem); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-in {
+            animation-duration: 250ms;
+            animation-fill-mode: both;
+            animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+        }
         .fade-in { animation-name: fadeIn; }
         .slide-in-from-top { animation-name: slideInFromTop; }
         .slide-in-from-bottom { animation-name: slideInFromBottom; }
         .slide-in-from-bottom-4 { animation-name: slideInFromBottom4; }
+        
+        /* 隱藏滾動條但保持功能 */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -29,34 +47,24 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     
-    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" crossorigin></script>
-    <script src="https://unpkg.com/lucide-react@0.468.0/dist/umd/lucide-react.min.js" crossorigin></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.min.js"></script>
     
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
-
-    <div id="debug-err" style="display:none; background:#ff3333; color:white; padding:15px; position:fixed; top:0; left:0; width:100%; z-index:999999; font-family:sans-serif; font-size:14px; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.3);">
-      🚨 網頁運行出錯：<span id="debug-err-msg"></span>
-    </div>
-    <script>
-      window.onerror = function(msg, url, line) {
-        document.getElementById('debug-err').style.display = 'block';
-        document.getElementById('debug-err-msg').textContent = msg + " (第 " + line + " 行)";
-        return false;
-      };
-    </script>
 
     <div id="root"></div>
 
     <script type="text/babel">
+        // 解構 React 常用 Hooks
         const { useState, useEffect, useCallback, Fragment } = React;
         
-        // 使用大寫穩定全域變數
+        // 解構 Lucide React 圖標組件 (將 Loader2 改為 Loader，CheckCircle2 改為 Check)
         const { 
-            Search, Book, Menu, ChevronDown, Bookmark, X, Home, Layers, Loader2, 
+            Search, Book, Menu, ChevronDown, Bookmark, X, Home, Layers, Loader, 
             Sparkles, Columns, List, ChevronLeft, ChevronsLeft, ChevronsRight, 
-            AlignLeft, AlignJustify, CheckCircle2, BookmarkCheck, Sun, Moon, Database, BookOpen 
+            AlignLeft, AlignJustify, Check, BookmarkCheck, Sun, Moon, Database, BookOpen 
         } = LucideReact;
 
         // --- 聖經目錄結構定義 ---
@@ -297,12 +305,7 @@
           const [appReady, setAppReady] = useState(false);
           const [isDarkMode, setIsDarkMode] = useState(() => getSavedState('bible_dark', false));
           const [activeTab, setActiveTab] = useState('home');
-          const [viewState, setViewState] = useState(() => {
-              const saved = getSavedState('bible_view', null);
-              // 強制加固：確保緩存一定有 bookId，防止舊資料格式崩潰
-              if (saved && saved.bookId) return saved;
-              return { book: '創世記', bookId: 'GEN', chapter: 1 };
-          });
+          const [viewState, setViewState] = useState(() => getSavedState('bible_view', { book: '創世記', bookId: 'GEN', chapter: 1 }));
           const [loadedBibles, setLoadedBibles] = useState({});
           const [fetching, setFetching] = useState(false);
           const [verses, setVerses] = useState([]);
@@ -385,7 +388,7 @@
                 let wlc = loadedBibles['orig-wlc']?.[viewState.bookId]?.[viewState.chapter]?.[i];
                 
                 if (isDemo && viewState.bookId === 'GEN' && viewState.chapter === 1) {
-                    if (i === 1) { cuv = "起初，神創造天地。"; wlc = "בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵ特 הַשָּׁמַיִם וְאֵת הָאָרֶץ"; }
+                    if (i === 1) { cuv = "起初，神創造天地。"; wlc = "בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַשָּׁמַיִם וְאֵת הָאָרֶץ"; }
                     if (i === 2) cuv = "地是空虛混沌，淵面黑暗；神的靈運行在水面上。";
                 }
 
@@ -417,7 +420,7 @@
                 ['orig-wlc', 'orig-lxx', 'orig-na28'].forEach(k => { if(!v.original[k]) v.original[k] = `[尚未匯入]`; });
             });
 
-          setVerses(newVerses);
+            setVerses(newVerses);
             setTimeout(() => setFetching(false), 200);
           }, [viewState, loadedBibles]);
 
@@ -516,13 +519,10 @@
 
           if (!appReady) return (
             <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-950 text-white">
-              <Loader2 className="w-10 h-10 animate-spin text-indigo-500 mb-4" />
+              <Loader className="w-10 h-10 animate-spin text-indigo-500 mb-4" />
               <div className="font-black tracking-widest animate-pulse">MANUSCRIPT SYNC</div>
             </div>
           );
-
-          // 安全獲取當前書卷的總章數，增加防崩潰鎖 ?. 
-          const currentBookTotalChapters = [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT].find(b => b.id === viewState.bookId)?.chapters || 50;
 
           return (
             <div className="h-[100dvh] flex flex-col overflow-hidden transition-colors duration-300 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
@@ -530,11 +530,11 @@
               {/* Toast */}
               {toastMsg && (
                 <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[200] bg-indigo-600 dark:bg-indigo-500 text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg animate-in slide-in-from-top fade-in flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4" /> {toastMsg} 
+                    <Check className="w-4 h-4" /> {toastMsg} 
                 </div>
               )}
 
-              {/* 導航側欄 */}
+              /* 導航側欄 */
               {isNavOpen && (
                 <div className="fixed inset-0 z-[150] bg-slate-50 dark:bg-slate-950 flex flex-col animate-in slide-in-from-bottom">
                    <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900 sticky top-0 shadow-sm transition-colors">
@@ -549,7 +549,7 @@
                         <div className="space-y-6 pb-20">
                            {['OT', 'NT'].map(t => (
                               <div key={t}>
-                                 <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 tracking-widest mb-3 px-1">{t === 'OT' ? '舊約 OLD TESTAMENT' : '新約 NEW TESTAMENT'}</h3>
+                                 <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 tracking-widest mb-3 px-1"><Book className="w-3 h-3 inline mr-1" />{t === 'OT' ? '舊約 OLD TESTAMENT' : '新約 NEW TESTAMENT'}</h3>
                                  <div className="grid grid-cols-4 gap-2">
                                     {BIBLE_STRUCTURE[t].map(b => (
                                        <button key={b.id} onClick={() => { setViewState(p => ({...p, book: b.name, bookId: b.id})); setNavStep('chapter'); }} className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all active:scale-95 ${viewState.bookId === b.id ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200'}`}>
@@ -562,7 +562,7 @@
                         </div>
                       ) : (
                         <div className="grid grid-cols-5 gap-2 pb-20">
-                           {Array.from({ length: currentBookTotalChapters }, (_, i) => i + 1).map(ch => (
+                           {Array.from({ length: [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT].find(b => b.id === viewState.bookId).chapters }, (_, i) => i + 1).map(ch => (
                               <button key={ch} onClick={() => { setViewState(p => ({...p, chapter: ch})); setIsNavOpen(false); }} className={`aspect-square flex items-center justify-center rounded-xl font-black border text-sm active:scale-95 transition-all ${viewState.chapter === ch ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200'}`}>
                                  {ch}
                               </button>
@@ -726,7 +726,7 @@
                     <div className="px-4 py-6 pb-40">
                        {fetching ? (
                           <div className="flex flex-col items-center justify-center py-32 text-indigo-400 gap-4">
-                             <Loader2 className="w-8 h-8 animate-spin" />
+                             <Loader className="w-8 h-8 animate-spin" />
                              <span className="text-[10px] font-black tracking-widest uppercase">Loading...</span>
                           </div>
                        ) : (
@@ -773,7 +773,7 @@
                  {activeTab === 'compare' && (
                     <div className="px-4 py-6 space-y-5 pb-40">
                        {fetching ? (
-                          <div className="flex flex-col items-center justify-center py-32 text-indigo-400 gap-4"><Loader2 className="w-8 h-8 animate-spin" /></div>
+                          <div className="flex flex-col items-center justify-center py-32 text-indigo-400 gap-4"><Loader className="w-8 h-8 animate-spin" /></div>
                        ) : (
                           verses.map(verse => (
                           <div key={verse.verseNum} className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm transition-colors duration-300">
@@ -883,7 +883,7 @@
                                    <div key={ver.id} className="flex justify-between items-center text-xs p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
                                       <span className="font-bold text-slate-700 dark:text-slate-300">{ver.label}</span>
                                       {loadedBibles[ver.id] ? 
-                                         <span className="text-emerald-500 font-black flex items-center gap-1"><CheckCircle2 className="w-3 h-3"/> 已載入</span> : 
+                                         <span className="text-emerald-500 font-black flex items-center gap-1"><Check className="w-3 h-3"/> 已載入</span> : 
                                          <span className="text-slate-400 dark:text-slate-600">尚未匯入</span>
                                       }
                                    </div>
@@ -907,7 +907,7 @@
                                 <div className="relative">
                                    <input type="file" accept=".json" onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                                    <div className="w-full flex items-center justify-center gap-2 p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-black text-sm transition-colors cursor-pointer active:scale-[0.98]">
-                                      {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Book className="w-4 h-4" />}
+                                      {importing ? <Loader className="w-4 h-4 animate-spin" /> : <Book className="w-4 h-4" />}
                                       {importing ? '解析並儲存中...' : '選擇 JSON 檔案並匯入'}
                                    </div>
                                 </div>
@@ -927,18 +927,18 @@
                     <div className="fixed bottom-[90px] left-0 right-0 px-4 max-w-lg mx-auto z-40">
                        <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 p-1.5 rounded-2xl shadow-lg flex gap-1.5 transition-colors duration-300">
                           <button onClick={() => setViewState(v => ({...v, chapter: Math.max(1, v.chapter - 1)}))} className="flex-[1.2] py-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-black text-xs flex items-center justify-center gap-1 active:scale-95 transition-all">
-                             <ChevronsLeft className="w-4 h-4" /> 上一章
+                             <ChevronLeft className="w-4 h-4" /> 上一章
                           </button>
                           <div className="flex-[0.8] relative flex">
-                             <select value={viewState.chapter} onChange={(e) => setViewState(v => ({ ...v, chapter: parseInt(e.target.value) }))} className="w-full appearance-none bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800/50 rounded-xl text-indigo-500 dark:text-indigo-400 font-black text-[11px] text-center outline-none cursor-pointer py-2.5 transition-colors" style={{ textAlignLast: 'center' }}>
-                                {Array.from({ length: currentBookTotalChapters }, (_, i) => i + 1).map(ch => (
+                             <select value={viewState.chapter} onChange={(e) => setViewState(v => ({ ...v, chapter: parseInt(e.target.value) }))} className="w-full appearance-none bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:indigo-800/50 rounded-xl text-indigo-500 dark:text-indigo-400 font-black text-[11px] text-center outline-none cursor-pointer py-2.5 transition-colors" style={{ textAlignLast: 'center' }}>
+                                {Array.from({ length: [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT].find(b => b.id === viewState.bookId).chapters }, (_, i) => i + 1).map(ch => (
                                    <option key={ch} value={ch}>CH {ch}</option>
                                 ))}
                              </select>
                              <ChevronDown className="w-3 h-3 text-indigo-400 dark:text-indigo-500 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                           </div>
                           <button onClick={() => setViewState(v => ({...v, chapter: v.chapter + 1}))} className="flex-[1.2] py-2.5 bg-indigo-600 dark:bg-indigo-500 rounded-xl text-white font-black text-xs flex items-center justify-center gap-1 shadow-md active:scale-95 transition-all hover:bg-indigo-700 dark:hover:bg-indigo-600">
-                             下一章 <ChevronsRight className="w-4 h-4" />
+                             下一章 <ChevronDown className="w-4 h-4 rotate-270" />
                           </button>
                        </div>
                     </div>
