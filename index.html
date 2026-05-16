@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Bible Explorer - 聖經原文對照探索器</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -40,7 +40,7 @@
     <script type="text/babel">
         const { useState, useEffect, useCallback, Fragment } = React;
         
-        // --- 📴 100% 離線純原生內嵌 SVG 圖標引擎 (徹底解决全白/小方塊問題) ---
+        // --- 📴 100% 離線純原生內嵌 SVG 圖標引擎 ---
         const ICON_PATHS = {
             'search': <Fragment><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></Fragment>,
             'book': <Fragment><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10M6 10h10"/></Fragment>,
@@ -62,36 +62,24 @@
             'moon': <Fragment><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></Fragment>,
             'database': <Fragment><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></Fragment>,
             'book-open': <Fragment><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></Fragment>,
-            'settings': <Fragment><path d="M12.22 2h-.44a2 2 0 0 0-2 2l-.2.1a2 2 0 0 1-2.81.25l-.17-.1a2 2 0 0 0-2.81.14l-.31.31a2 2 0 0 0 .14 2.81l.1.17a2 2 0 0 1-.25 2.81l-.1.2a2 2 0 0 0-2 2v.44a2 2 0 0 0 2 2l.1.2a2 2 0 0 1 .25 2.81l-.1.17a2 2 0 0 0-.14 2.81l.31.31a2 2 0 0 0 2.81-.14l.17-.1a2 2 0 0 1 2.81-.25l.2.1a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2l.2-.1a2 2 0 0 1 2.81-.25l.17.1a2 2 0 0 0 2.81-.14l.31-.31a2 2 0 0 0-.14-2.81l-.1-.17a2 2 0 0 1 .25-2.81l.1-.2a2 2 0 0 0 2-2v-.44a2 2 0 0 0-2-2l-.1-.2a2 2 0 0 1-.25-2.81l.1-.17a2 2 0 0 0 .14-2.81l-.31-.31a2 2 0 0 0-2.81.14l-.17.1a2 2 0 0 1-2.81.25l-.2-.1a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></Fragment>
+            'settings': <Fragment><path d="M12.22 2h-.44a2 2 0 0 0-2 2l-.2.1a2 2 0 0 1-2.81.25l-.17-.1a2 2 0 0 0-2.81.14l-.31.31a2 2 0 0 0 .14 2.81l.1.17a2 2 0 0 1-.25 2.81l-.1.2a2 2 0 0 0-2 2v.44a2 2 0 0 0 2 2l.1.2a2 2 0 0 1 .25 2.81l-.1.17a2 2 0 0 0-.14 2.81l.31.31a2 2 0 0 0 2.81-.14l.17-.1a2 2 0 0 1 2.81-.25l.2.1a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2l.2-.1a2 2 0 0 1 2.81-.25l.17.1a2 2 0 0 0 2.81-.14l.31-.31a2 2 0 0 0-.14-2.81l-.1-.17a2 2 0 0 1 .25-2.81l.1-.2a2 2 0 0 0 2 2v-.44a2 2 0 0 0-2-2l-.1-.2a2 2 0 0 1-.25-2.81l.1-.17a2 2 0 0 0 .14-2.81l-.31-.31a2 2 0 0 0-2.81.14l-.17.1a2 2 0 0 1-2.81.25l-.2-.1a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></Fragment>
         };
 
         const LucideIcon = ({ name, className = '', size = 20, strokeWidth = 2, ...props }) => {
             const path = ICON_PATHS[name];
             if (!path) return <span className={`inline-block text-slate-400 ${className}`} style={{ width: size, height: size }}>▪</span>;
             return (
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width={size}
-                    height={size}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={strokeWidth}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className={`${className}`}
-                    {...props}
-                >
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={`${className}`} {...props}>
                     {path}
                 </svg>
             );
         };
 
-        // 封裝常用組件
         const Search = (p) => <LucideIcon name="search" {...p} />;
         const Book = (p) => <LucideIcon name="book" {...p} />;
         const Menu = (p) => <LucideIcon name="menu" {...p} />;
         const ChevronDown = (p) => <LucideIcon name="chevron-down" {...p} />;
+        const ChevronLeft = (p) => <LucideIcon name="chevron-left" {...p} />;
         const Bookmark = (p) => <LucideIcon name="bookmark" {...p} />;
         const X = (p) => <LucideIcon name="x" {...p} />;
         const Home = (p) => <LucideIcon name="home" {...p} />;
@@ -99,7 +87,6 @@
         const Sparkles = (p) => <LucideIcon name="sparkles" {...p} />;
         const Columns = (p) => <LucideIcon name="columns" {...p} />;
         const List = (p) => <LucideIcon name="list" {...p} />;
-        const ChevronLeft = (p) => <LucideIcon name="chevron-left" {...p} />;
         const AlignLeft = (p) => <LucideIcon name="align-left" {...p} />;
         const AlignJustify = (p) => <LucideIcon name="align-justify" {...p} />;
         const Check = (p) => <LucideIcon name="check" {...p} />;
@@ -331,7 +318,6 @@
           const [dictQuery, setDictQuery] = useState('');
           const [dictResults, setDictResults] = useState([]);
 
-          // 🔍 全新離線經文搜尋引擎狀態
           const [bibleSearchQuery, setBibleSearchQuery] = useState('');
           const [bibleSearchResults, setBibleSearchResults] = useState([]);
 
@@ -382,7 +368,7 @@
                 let cuv = loadedBibles['zh-cuv']?.[viewState.bookId]?.[viewState.chapter]?.[i];
                 let wlc = loadedBibles['orig-wlc']?.[viewState.bookId]?.[viewState.chapter]?.[i];
                 if (isDemo && viewState.bookId === 'GEN' && viewState.chapter === 1) {
-                    if (i === 1) { cuv = "起初，神創造天地。"; wlc = "בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַשָּׁ美與 וְאֵת הָאָרֶץ"; }
+                    if (i === 1) { cuv = "起初，神創造天地。"; wlc = "בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַשָּׁמַיִם وְאֵ特 הָאָרֶץ"; }
                     if (i === 2) cuv = "地是空虛混沌，淵面黑暗；神的靈運行在水面上。";
                 }
                 newVerses.push({
@@ -405,38 +391,22 @@
             if (appReady && (activeTab === 'read' || activeTab === 'compare')) loadChapter();
           }, [appReady, activeTab, loadChapter]);
 
-          // --- 🦾 全文本聖經搜尋演算邏輯 ---
           const handleBibleSearch = (textQuery) => {
               setBibleSearchQuery(textQuery);
               const q = textQuery.trim();
               if (!q) { setBibleSearchResults([]); return; }
-
               const currentVersionData = loadedBibles[readVersion];
               if (!currentVersionData) { setBibleSearchResults([]); return; }
-
-              const matchResults = [];
-              let totalFound = 0;
-              const allBooksOrdered = [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT];
-
+              const matchResults = []; let totalFound = 0; const allBooksOrdered = [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT];
               for (const book of allBooksOrdered) {
-                  const bookMap = currentVersionData[book.id];
-                  if (!bookMap) continue;
-
+                  const bookMap = currentVersionData[book.id]; if (!bookMap) continue;
                   for (const chKey of Object.keys(bookMap)) {
                       const chData = bookMap[chKey];
                       for (const vKey of Object.keys(chData)) {
                           const verseText = String(chData[vKey]);
                           if (verseText && verseText.includes(q)) {
-                              matchResults.push({
-                                  id: `${book.id}_${chKey}_${vKey}`,
-                                  bookName: book.name,
-                                  bookId: book.id,
-                                  chapter: parseInt(chKey),
-                                  verse: parseInt(vKey),
-                                  text: verseText
-                              });
-                              totalFound++;
-                              if (totalFound >= 80) break; // 鎖定上限防止手機效能過載
+                              matchResults.push({ id: `${book.id}_${chKey}_${vKey}`, bookName: book.name, bookId: book.id, chapter: parseInt(chKey), verse: parseInt(vKey), text: verseText });
+                              totalFound++; if (totalFound >= 80) break;
                           }
                       }
                       if (totalFound >= 80) break;
@@ -451,8 +421,7 @@
             setImporting(true); const reader = new FileReader();
             reader.onload = async (evt) => {
                 try {
-                    let json;
-                    try { json = JSON.parse(evt.target.result); } catch (je) { throw new Error(`JSON 語法故障 (${je.message})`); }
+                    let json; try { json = JSON.parse(evt.target.result); } catch (je) { throw new Error(`JSON 語法故障 (${je.message})`); }
                     const normalized = normalizeBibleData(json);
                     if (Object.keys(normalized).length > 0) {
                       try { await saveToDB(importTarget, normalized); } catch (de) { throw new Error(`資料庫權限出錯 (${de.message || de})`); }
@@ -466,13 +435,10 @@
           };
 
           const executeDictSearch = (query) => {
-              const q = query.trim().toLowerCase();
-              if (!q || !loadedBibles['dict-strongs']) return [];
+              const q = query.trim().toLowerCase(); if (!q || !loadedBibles['dict-strongs']) return [];
               const results = []; const dict = loadedBibles['dict-strongs'];
               for (const [strongs, data] of Object.entries(dict)) {
-                  if (strongs.toLowerCase() === q || (data.lemma && data.lemma.toLowerCase().includes(q)) || (data.strongs_definition && data.strongs_definition.toLowerCase().includes(q))) {
-                      results.push({ strongs, ...data });
-                  }
+                  if (strongs.toLowerCase() === q || (data.lemma && data.lemma.toLowerCase().includes(q)) || (data.strongs_definition && data.strongs_definition.toLowerCase().includes(q))) { results.push({ strongs, ...data }); }
                   if (results.length >= 15) break; 
               }
               return results;
@@ -515,7 +481,7 @@
               
               {/* Toast */}
               {toastMsg && (
-                <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[200] bg-indigo-600 text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg animate-in slide-in-from-top flex items-center gap-2">
+                <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[200] bg-indigo-600 text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg flex items-center gap-2">
                     <Check className="w-4 h-4" /> {toastMsg} 
                 </div>
               )}
@@ -801,7 +767,7 @@
                     </div>
                  )}
 
-                 {/* 🔍 全新聖經經文搜尋分頁 UI */}
+                 {/* 搜尋分頁 */}
                  {activeTab === 'search' && (
                     <div className="px-4 py-6 flex flex-col h-full animate-in fade-in pb-40">
                         <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm sticky top-0 z-10 flex gap-2 mb-4">
@@ -924,9 +890,9 @@
                     </div>
                  )}
 
-                 {/* 浮動導航列 */}
+                 {/* 浮動導航列 (已同步上移至 bottom-[105px]，完美防撞欄) */}
                  {(activeTab === 'read' || activeTab === 'compare') && !fetching && (
-                    <div className="fixed bottom-[90px] left-0 right-0 px-4 max-w-lg mx-auto z-40">
+                    <div className="fixed bottom-[105px] left-0 right-0 px-4 max-w-lg mx-auto z-40">
                        <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 p-1.5 rounded-2xl shadow-lg flex gap-1.5">
                           <button onClick={() => setViewState(v => ({...v, chapter: Math.max(1, v.chapter - 1)}))} className="flex-[1.2] py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-black text-xs flex items-center justify-center gap-1">
                              <ChevronLeft className="w-4 h-4" /> 上一章
@@ -947,8 +913,8 @@
                  )}
               </main>
 
-              {/* 底部五向主導航 (已升級成網格 cols-5 完美對齊) */}
-              <nav className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-2 pb-6 grid grid-cols-5 sticky bottom-0 z-50 shadow-[0_-10px_20px_rgba(0,0,0,0.03)] shrink-0">
+              {/* 底部五向主導航列 (優化：pt-2.5 pb-9 打通 Android 底部安全隔離區) */}
+              <nav className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 pt-2.5 pb-9 grid grid-cols-5 sticky bottom-0 z-50 shadow-[0_-10px_20px_rgba(0,0,0,0.03)] shrink-0">
                  <TabButton active={activeTab === 'home'} onClick={() => setActiveTab('home')} icon={<Home className="w-5 h-5" />} label="主頁" />
                  <TabButton active={activeTab === 'read'} onClick={() => setActiveTab('read')} icon={<Book className="w-5 h-5" />} label="讀經" />
                  <TabButton active={activeTab === 'compare'} onClick={() => setActiveTab('compare')} icon={<Layers className="w-5 h-5" />} label="對照" />
