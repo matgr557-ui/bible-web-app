@@ -51,18 +51,13 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        // 解構 React 常用 Hooks
         const { useState, useEffect, useCallback, Fragment } = React;
         
-        // --- 🚀 自創極速安全圖標渲染引擎 (代替容易崩潰的 lucide-react) ---
+        // --- 自創極速安全圖標渲染引擎 ---
         const LucideIcon = ({ name, className = '', size = 20, strokeWidth = 2, ...props }) => {
-            // 自動將大寫命名轉為 kebab-case (如 ChevronDown -> chevron-down)
             const kebabName = name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
-            
-            // 從原生庫中撈取圖標節點資料
             let iconData = window.lucide?.icons?.[kebabName] || window.lucide?.icons?.[name];
             
-            // 安全防撞墊：如果找不到特定圖標（可能版本問題），進行智慧替代
             if (!iconData && (kebabName === 'loader-circle' || kebabName === 'loader' || kebabName === 'loader2')) {
                 iconData = window.lucide?.icons?.['loader-circle'] || window.lucide?.icons?.['loader'] || window.lucide?.icons?.['refresh-cw'];
             }
@@ -70,7 +65,6 @@
                 iconData = window.lucide?.icons?.['bookmark'];
             }
             
-            // 終極備用：如果連底層庫都沒載入，渲染一個優雅的小正方形，確保整隻 App 絕對不死機
             if (!iconData) {
                 return <span className={`inline-block text-center text-slate-400 ${className}`} style={{ width: size, height: size, lineHeight: 1 }}>▪</span>;
             }
@@ -91,7 +85,6 @@
                 >
                     {iconData.map((node, idx) => {
                         const [tag, attrs] = node;
-                        // 將 HTML 屬性（如 stroke-width）轉化為 React 格式（如 strokeWidth）
                         const reactAttrs = {};
                         Object.keys(attrs).forEach(key => {
                             const camelKey = key.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
@@ -104,7 +97,6 @@
             );
         };
 
-        // 為舊代碼封裝對應元件，唔使大改任何 JSX 邏輯！
         const Search = (p) => <LucideIcon name="search" {...p} />;
         const Book = (p) => <LucideIcon name="book" {...p} />;
         const Menu = (p) => <LucideIcon name="menu" {...p} />;
@@ -123,13 +115,13 @@
         const AlignLeft = (p) => <LucideIcon name="align-left" {...p} />;
         const AlignJustify = (p) => <LucideIcon name="align-justify" {...p} />;
         const Check = (p) => <LucideIcon name="check" {...p} />;
-        const BookmarkCheck = (p) => <LucideIcon name="bookmark" {...p} />; // 自動安全對應
+        const BookmarkCheck = (p) => <LucideIcon name="bookmark" {...p} />;
         const Sun = (p) => <LucideIcon name="sun" {...p} />;
         const Moon = (p) => <LucideIcon name="moon" {...p} />;
         const Database = (p) => <LucideIcon name="database" {...p} />;
         const BookOpen = (p) => <LucideIcon name="book-open" {...p} />;
 
-        // --- 聖經目錄結構定義 ---
+        // --- 聖經目錄結構定義 (已修正耶利米哀歌屬性) ---
         const BIBLE_STRUCTURE = {
           OT: [
             { name: '創世記', en: 'Genesis', abbr: 'Gen', chapters: 50, id: 'GEN' }, { name: '出埃及記', en: 'Exodus', abbr: 'Exo', chapters: 40, id: 'EXO' },
@@ -144,7 +136,7 @@
             { name: '詩篇', en: 'Psalms', abbr: 'Psa', chapters: 150, id: 'PSA' }, { name: '箴言', en: 'Proverbs', abbr: 'Pro', chapters: 31, id: 'PRO' },
             { name: '傳道書', en: 'Ecclesiastes', abbr: 'Ecc', chapters: 12, id: 'ECC' }, { name: '雅歌', en: 'Song of Solomon', abbr: 'Sng', chapters: 8, id: 'SNG' },
             { name: '以賽亞書', en: 'Isaiah', abbr: 'Isa', chapters: 66, id: 'ISA' }, { name: '耶利米書', en: 'Jeremiah', abbr: 'Jer', chapters: 52, id: 'JER' },
-            { name: '耶利米哀歌', en: 'Lamentations', font: 'Lam', chapters: 5, id: 'LAM' }, { name: '以西結書', en: 'Ezekiel', abbr: 'Ezk', chapters: 48, id: 'EZK' },
+            { name: '耶利米哀歌', en: 'Lamentations', abbr: 'Lam', chapters: 5, id: 'LAM' }, { name: '以西結書', en: 'Ezekiel', abbr: 'Ezk', chapters: 48, id: 'EZK' },
             { name: '但以理書', en: 'Daniel', abbr: 'Dan', chapters: 12, id: 'DAN' }, { name: '何西阿書', en: 'Hosea', abbr: 'Hos', chapters: 14, id: 'HOS' },
             { name: '約珥書', en: 'Joel', abbr: 'Joe', chapters: 3, id: 'JOL' }, { name: '阿摩司書', en: 'Amos', abbr: 'Amo', chapters: 9, id: 'AMO' },
             { name: '俄巴底亞書', en: 'Obadiah', abbr: 'Oba', chapters: 1, id: 'OBA' }, { name: '約拿書', en: 'Jonah', abbr: 'Jon', chapters: 4, id: 'JON' },
@@ -201,7 +193,7 @@
                   if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME, { keyPath: 'id' });
                 };
                 request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
+                request.onerror = () => reject(request.error || new Error("瀏覽器拒絕開放本地資料庫儲存空間"));
             } catch (error) {
                 reject(error);
             }
@@ -390,7 +382,6 @@
           const [dictQuery, setDictQuery] = useState('');
           const [dictResults, setDictResults] = useState([]);
 
-          // 處理深色模式切換
           useEffect(() => {
             setSavedState('bible_dark', isDarkMode);
             if (isDarkMode) {
@@ -431,7 +422,6 @@
 
           const loadChapter = useCallback(async () => {
             setFetching(true);
-            
             const isDemo = Object.keys(loadedBibles).length === 0;
 
             let maxV = isDemo ? 5 : 1; 
@@ -490,6 +480,7 @@
             if (appReady && (activeTab === 'read' || activeTab === 'compare')) loadChapter();
           }, [appReady, activeTab, loadChapter]);
 
+          // --- 🦾 高精密二段式分拆上傳引擎 ---
           const handleFileUpload = (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -497,19 +488,33 @@
             const reader = new FileReader();
             reader.onload = async (evt) => {
                 try {
-                    const json = JSON.parse(evt.target.result);
+                    // 第一階段：精確驗證 JSON
+                    let json;
+                    try {
+                        json = JSON.parse(evt.target.result);
+                    } catch (jsonErr) {
+                        throw new Error(`JSON 語法出錯 (${jsonErr.message})。請檢查檔案結尾是否完整。`);
+                    }
+
+                    // 第二階段：數據正規化
                     const normalized = normalizeBibleData(json);
                     
                     if (Object.keys(normalized).length > 0) {
-                      await saveToDB(importTarget, normalized);
+                      // 第三階段：精確驗證資料庫權限
+                      try {
+                        await saveToDB(importTarget, normalized);
+                      } catch (dbErr) {
+                        throw new Error(`資料庫寫入失敗 (${dbErr.message || dbErr})。如果你打包成 APK，請務必在 Java 中啟用：WebSettings.setDomStorageEnabled(true);`);
+                      }
+                      
                       setLoadedBibles(prev => ({ ...prev, [importTarget]: normalized }));
                       setToastMsg(`✅ ${importTarget.toUpperCase()} 匯入成功`);
                     } else {
                       setToastMsg('❌ 匯入失敗：無法識別 JSON 結構');
                     }
                 } catch (err) { 
-                    console.error("匯入錯誤", err);
-                    setToastMsg('❌ 儲存失敗：請確定為正確 JSON 檔'); 
+                    console.error("匯入故障詳細資料:", err);
+                    setToastMsg(`❌ ${err.message}`); 
                 }
                 setImporting(false);
                 e.target.value = '';
@@ -520,10 +525,8 @@
           const executeDictSearch = (query) => {
               const q = query.trim().toLowerCase();
               if (!q || !loadedBibles['dict-strongs']) return [];
-              
               const results = [];
               const dict = loadedBibles['dict-strongs'];
-              
               for (const [strongs, data] of Object.entries(dict)) {
                   if (
                       strongs.toLowerCase() === q ||
@@ -803,7 +806,7 @@
                                             <span style={{ fontSize: `${fontSize}px` }} className="text-slate-800 dark:text-slate-200 font-medium leading-relaxed flex-1">{getVerseText(v, readVersion)}</span>
                                          )}
                                          <button onClick={() => toggleBookmark(v)} className={`ml-2 p-1 rounded-full shrink-0 transition-colors ${isBookmarked(v.verseNum) ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' : 'text-slate-200 dark:text-slate-600 hover:text-amber-400'}`}>
-                                            {isBookmarked(v.verseNum) ? <LucideIcon name="bookmark-check" className="w-4 h-4"/> : <Bookmark className="w-4 h-4"/>}
+                                            {isBookmarked(v.verseNum) ? <BookmarkCheck className="w-4 h-4"/> : <Bookmark className="w-4 h-4"/>}
                                          </button>
                                       </div>
                                    </div>
@@ -820,7 +823,7 @@
                                             <span style={{ fontSize: `${fontSize}px` }} className="text-slate-800 dark:text-slate-200 font-medium leading-loose">{getVerseText(v, readVersion)}</span>
                                          )}
                                          <button onClick={() => toggleBookmark(v)} className={`inline-flex align-middle mx-1 -mt-1 transition-colors ${isBookmarked(v.verseNum) ? 'text-amber-500' : 'text-slate-200 dark:text-slate-600 hover:text-amber-400'}`}>
-                                            {isBookmarked(v.verseNum) ? <LucideIcon name="bookmark-check" className="w-3.5 h-3.5"/> : <Bookmark className="w-3.5 h-3.5"/>}
+                                            {isBookmarked(v.verseNum) ? <BookmarkCheck className="w-3.5 h-3.5"/> : <Bookmark className="w-3.5 h-3.5"/>}
                                          </button>
                                       </span>
                                    </Fragment>
@@ -842,7 +845,7 @@
                              <div className="px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
                                 <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Verse {verse.verseNum}</span>
                                 <button onClick={() => toggleBookmark(verse)} className={isBookmarked(verse.verseNum) ? 'text-amber-500' : 'text-slate-300 dark:text-slate-600 hover:text-amber-400'}>
-                                   {isBookmarked(verse.verseNum) ? <LucideIcon name="bookmark-check" className="w-4 h-4"/> : <Bookmark className="w-4 h-4"/>}
+                                   {isBookmarked(verse.verseNum) ? <BookmarkCheck className="w-4 h-4"/> : <Bookmark className="w-4 h-4"/>}
                                 </button>
                              </div>
                              <div className="p-4 sm:p-5">
@@ -984,7 +987,7 @@
                     </div>
                  )}
 
-                 {/* 浮動導航列：上一章/下一章 */}
+                 {/* 浮動導航列 */}
                  {(activeTab === 'read' || activeTab === 'compare') && !fetching && (
                     <div className="fixed bottom-[90px] left-0 right-0 px-4 max-w-lg mx-auto z-40">
                        <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 p-1.5 rounded-2xl shadow-lg flex gap-1.5 transition-colors duration-300">
@@ -1029,7 +1032,6 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2l-.2.1a2 2 0 0 1-2.81.25l-.17-.1a2 2 0 0 0-2.81.14l-.31.31a2 2 0 0 0 .14 2.81l.1.17a2 2 0 0 1-.25 2.81l-.1.2a2 2 0 0 0-2 2v.44a2 2 0 0 0 2 2l.1.2a2 2 0 0 1 .25 2.81l-.1.17a2 2 0 0 0-.14 2.81l.31.31a2 2 0 0 0 2.81-.14l.17-.1a2 2 0 0 1 2.81-.25l.2.1a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2l.2-.1a2 2 0 0 1 2.81-.25l.17.1a2 2 0 0 0 2.81-.14l.31-.31a2 2 0 0 0-.14-2.81l-.1-.17a2 2 0 0 1 .25-2.81l.1-.2a2 2 0 0 0 2-2v-.44a2 2 0 0 0-2-2l-.1-.2a2 2 0 0 1-.25-2.81l.1-.17a2 2 0 0 0 .14-2.81l-.31-.31a2 2 0 0 0-2.81.14l-.17.1a2 2 0 0 1-2.81.25l-.2-.1a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
         );
 
-        // 渲染根節點
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
