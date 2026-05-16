@@ -60,12 +60,51 @@
         // 解構 React 常用 Hooks
         const { useState, useEffect, useCallback, Fragment } = React;
         
-        // 解構 Lucide React 圖標組件 (將 Loader2 改為 Loader，CheckCircle2 改為 Check)
-        const { 
-            Search, Book, Menu, ChevronDown, Bookmark, X, Home, Layers, Loader, 
-            Sparkles, Columns, List, ChevronLeft, ChevronsLeft, ChevronsRight, 
-            AlignLeft, AlignJustify, Check, BookmarkCheck, Sun, Moon, Database, BookOpen 
-        } = LucideReact;
+        // --- 安全圖標防崩潰引擎 ---
+        const getSafeIcon = (iconName) => {
+            const fallbackComponent = (props) => (
+                <span {...props} className={`inline-block text-center font-bold ${props.className || ''}`} style={{ width: '1em', height: '1em', lineHeight: '1' }}>▪</span>
+            );
+            
+            // 兼容大小寫全域變數
+            const lucideLib = window.LucideReact || window.lucideReact || window.lucide;
+            if (!lucideLib) return fallbackComponent;
+            
+            // 核心更名對應邏輯
+            if (iconName === 'Loader2' || iconName === 'Loader') {
+                return lucideLib.LoaderCircle || lucideLib.Loader2 || lucideLib.Loader || lucideLib.RefreshCw || fallbackComponent;
+            }
+            if (iconName === 'CheckCircle2' || iconName === 'Check') {
+                return lucideLib.CheckCircle || lucideLib.Check || lucideLib.CheckCircle2 || fallbackComponent;
+            }
+            
+            return lucideLib[iconName] || fallbackComponent;
+        };
+
+        // 動態且安全地載入所有需要的圖標
+        const Search = getSafeIcon('Search');
+        const Book = getSafeIcon('Book');
+        const Menu = getSafeIcon('Menu');
+        const ChevronDown = getSafeIcon('ChevronDown');
+        const Bookmark = getSafeIcon('Bookmark');
+        const X = getSafeIcon('X');
+        const Home = getSafeIcon('Home');
+        const Layers = getSafeIcon('Layers');
+        const Loader = getSafeIcon('Loader'); // 自動轉化為 LoaderCircle
+        const Sparkles = getSafeIcon('Sparkles');
+        const Columns = getSafeIcon('Columns');
+        const List = getSafeIcon('List');
+        const ChevronLeft = getSafeIcon('ChevronLeft');
+        const ChevronsLeft = getSafeIcon('ChevronsLeft');
+        const ChevronsRight = getSafeIcon('ChevronsRight');
+        const AlignLeft = getSafeIcon('AlignLeft');
+        const AlignJustify = getSafeIcon('AlignJustify');
+        const Check = getSafeIcon('Check'); // 自動轉化為 CheckCircle / Check
+        const BookmarkCheck = getSafeIcon('BookmarkCheck');
+        const Sun = getSafeIcon('Sun');
+        const Moon = getSafeIcon('Moon');
+        const Database = getSafeIcon('Database');
+        const BookOpen = getSafeIcon('BookOpen');
 
         // --- 聖經目錄結構定義 ---
         const BIBLE_STRUCTURE = {
@@ -98,7 +137,7 @@
             { name: '哥林多前書', en: '1 Corinthians', abbr: '1Co', chapters: 16, id: '1CO' }, { name: '哥林多後書', en: '2 Corinthians', abbr: '2Co', chapters: 13, id: '2CO' },
             { name: '加拉太書', en: 'Galatians', abbr: 'Gal', chapters: 6, id: 'GAL' }, { name: '以弗所書', en: 'Ephesians', abbr: 'Eph', chapters: 6, id: 'EPH' },
             { name: '腓立比書', en: 'Philippians', abbr: 'Php', chapters: 4, id: 'PHL' }, { name: '歌羅西書', en: 'Colossians', abbr: 'Col', chapters: 4, id: 'COL' },
-            { name: '帖撒羅尼迦前書', en: '1 Thessalonians', abbr: '1Th', chapters: 5, id: '1TH' }, { name: '帖撒羅尼迦後書', en: '2 Thessalonians', abbr: '2Th', chapters: 3, id: '2TH' },
+            { name: '帖撒羅尼迦前書', en: '1 Testament', abbr: '1Th', chapters: 5, id: '1TH' }, { name: '帖撒羅尼迦後書', en: '2 Testament', abbr: '2Th', chapters: 3, id: '2TH' },
             { name: '提摩太前書', en: '1 Timothy', abbr: '1Ti', chapters: 6, id: '1TI' }, { name: '提摩太後書', en: '2 Timothy', abbr: '2Ti', chapters: 4, id: '2TI' },
             { name: '提多書', en: 'Titus', abbr: 'Tit', chapters: 3, id: 'TIT' }, { name: '腓利門書', en: 'Philemon', abbr: 'Phm', chapters: 1, id: 'PHM' },
             { name: '希伯來書', en: 'Hebrews', abbr: 'Heb', chapters: 13, id: 'HEB' }, { name: '雅各書', en: 'James', abbr: 'Jas', chapters: 5, id: 'JAS' },
@@ -388,7 +427,7 @@
                 let wlc = loadedBibles['orig-wlc']?.[viewState.bookId]?.[viewState.chapter]?.[i];
                 
                 if (isDemo && viewState.bookId === 'GEN' && viewState.chapter === 1) {
-                    if (i === 1) { cuv = "起初，神創造天地。"; wlc = "בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַשָּׁמַיִם וְאֵת הָאָרֶץ"; }
+                    if (i === 1) { cuv = "起初，神創造天地。"; wlc = "בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַ神與 וְאֵת הָאָרֶץ"; }
                     if (i === 2) cuv = "地是空虛混沌，淵面黑暗；神的靈運行在水面上。";
                 }
 
@@ -534,7 +573,7 @@
                 </div>
               )}
 
-              /* 導航側欄 */
+              {/* 導航側欄 */}
               {isNavOpen && (
                 <div className="fixed inset-0 z-[150] bg-slate-50 dark:bg-slate-950 flex flex-col animate-in slide-in-from-bottom">
                    <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900 sticky top-0 shadow-sm transition-colors">
@@ -930,7 +969,7 @@
                              <ChevronLeft className="w-4 h-4" /> 上一章
                           </button>
                           <div className="flex-[0.8] relative flex">
-                             <select value={viewState.chapter} onChange={(e) => setViewState(v => ({ ...v, chapter: parseInt(e.target.value) }))} className="w-full appearance-none bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:indigo-800/50 rounded-xl text-indigo-500 dark:text-indigo-400 font-black text-[11px] text-center outline-none cursor-pointer py-2.5 transition-colors" style={{ textAlignLast: 'center' }}>
+                             <select value={viewState.chapter} onChange={(e) => setViewState(v => ({ ...v, chapter: parseInt(e.target.value) }))} className="w-full appearance-none bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800/50 rounded-xl text-indigo-500 dark:text-indigo-400 font-black text-[11px] text-center outline-none cursor-pointer py-2.5 transition-colors" style={{ textAlignLast: 'center' }}>
                                 {Array.from({ length: [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT].find(b => b.id === viewState.bookId).chapters }, (_, i) => i + 1).map(ch => (
                                    <option key={ch} value={ch}>CH {ch}</option>
                                 ))}
@@ -938,7 +977,7 @@
                              <ChevronDown className="w-3 h-3 text-indigo-400 dark:text-indigo-500 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                           </div>
                           <button onClick={() => setViewState(v => ({...v, chapter: v.chapter + 1}))} className="flex-[1.2] py-2.5 bg-indigo-600 dark:bg-indigo-500 rounded-xl text-white font-black text-xs flex items-center justify-center gap-1 shadow-md active:scale-95 transition-all hover:bg-indigo-700 dark:hover:bg-indigo-600">
-                             下一章 <ChevronDown className="w-4 h-4 rotate-270" />
+                             下一章 <ChevronDown className="w-4 h-4 -rotate-90" />
                           </button>
                        </div>
                     </div>
