@@ -1,0 +1,937 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { Search, Book, Menu, ChevronDown, Bookmark, X, Home, Layers, Loader2, Sparkles, Columns, List, ChevronLeft, ChevronsLeft, ChevronsRight, AlignLeft, AlignJustify, CheckCircle2, BookmarkCheck, Sun, Moon, Database, BookOpen } from 'lucide-react';
+
+// --- 聖經目錄結構定義 ---
+const BIBLE_STRUCTURE = {
+  OT: [
+    { name: '創世記', en: 'Genesis', abbr: 'Gen', chapters: 50, id: 'GEN' }, { name: '出埃及記', en: 'Exodus', abbr: 'Exo', chapters: 40, id: 'EXO' },
+    { name: '利未記', en: 'Leviticus', abbr: 'Lev', chapters: 27, id: 'LEV' }, { name: '民數記', en: 'Numbers', abbr: 'Num', chapters: 36, id: 'NUM' },
+    { name: '申命記', en: 'Deuteronomy', abbr: 'Deu', chapters: 34, id: 'DEU' }, { name: '約書亞記', en: 'Joshua', abbr: 'Jos', chapters: 24, id: 'JSH' },
+    { name: '士師記', en: 'Judges', abbr: 'Jdg', chapters: 21, id: 'JDG' }, { name: '路得記', en: 'Ruth', abbr: 'Rut', chapters: 4, id: 'RUT' },
+    { name: '撒母耳記上', en: '1 Samuel', abbr: '1Sa', chapters: 31, id: '1SA' }, { name: '撒母耳記下', en: '2 Samuel', abbr: '2Sa', chapters: 24, id: '2SA' },
+    { name: '列王紀上', en: '1 Kings', abbr: '1Ki', chapters: 22, id: '1KI' }, { name: '列王紀下', en: '2 Kings', abbr: '2Ki', chapters: 25, id: '2KI' },
+    { name: '歷代志上', en: '1 Chronicles', abbr: '1Ch', chapters: 29, id: '1CH' }, { name: '歷代志下', en: '2 Chronicles', abbr: '2Ch', chapters: 36, id: '2CH' },
+    { name: '以斯拉記', en: 'Ezra', abbr: 'Ezr', chapters: 10, id: 'EZR' }, { name: '尼希米記', en: 'Nehemiah', abbr: 'Neh', chapters: 13, id: 'NEH' },
+    { name: '以斯帖記', en: 'Esther', abbr: 'Est', chapters: 10, id: 'EST' }, { name: '約伯記', en: 'Job', abbr: 'Job', chapters: 42, id: 'JOB' },
+    { name: '詩篇', en: 'Psalms', abbr: 'Psa', chapters: 150, id: 'PSA' }, { name: '箴言', en: 'Proverbs', abbr: 'Pro', chapters: 31, id: 'PRO' },
+    { name: '傳道書', en: 'Ecclesiastes', abbr: 'Ecc', chapters: 12, id: 'ECC' }, { name: '雅歌', en: 'Song of Solomon', abbr: 'Sng', chapters: 8, id: 'SNG' },
+    { name: '以賽亞書', en: 'Isaiah', abbr: 'Isa', chapters: 66, id: 'ISA' }, { name: '耶利米書', en: 'Jeremiah', abbr: 'Jer', chapters: 52, id: 'JER' },
+    { name: '耶利米哀歌', en: 'Lamentations', abbr: 'Lam', chapters: 5, id: 'LAM' }, { name: '以西結書', en: 'Ezekiel', abbr: 'Ezk', chapters: 48, id: 'EZK' },
+    { name: '但以理書', en: 'Daniel', abbr: 'Dan', chapters: 12, id: 'DAN' }, { name: '何西阿書', en: 'Hosea', abbr: 'Hos', chapters: 14, id: 'HOS' },
+    { name: '約珥書', en: 'Joel', abbr: 'Joe', chapters: 3, id: 'JOL' }, { name: '阿摩司書', en: 'Amos', abbr: 'Amo', chapters: 9, id: 'AMO' },
+    { name: '俄巴底亞書', en: 'Obadiah', abbr: 'Oba', chapters: 1, id: 'OBA' }, { name: '約拿書', en: 'Jonah', abbr: 'Jon', chapters: 4, id: 'JON' },
+    { name: '彌迦書', en: 'Micah', abbr: 'Mic', chapters: 7, id: 'MIC' }, { name: '那鴻書', en: 'Nahum', abbr: 'Nah', chapters: 3, id: 'NAM' },
+    { name: '哈巴谷書', en: 'Habakkuk', abbr: 'Hab', chapters: 3, id: 'HAB' }, { name: '西番雅書', en: 'Zephaniah', abbr: 'Zep', chapters: 3, id: 'ZEP' },
+    { name: '哈該書', en: 'Haggai', abbr: 'Hag', chapters: 2, id: 'HAG' }, { name: '撒迦利亞書', en: 'Zechariah', abbr: 'Zec', chapters: 14, id: 'ZEC' },
+    { name: '瑪拉基書', en: 'Malachi', abbr: 'Mal', chapters: 4, id: 'MAL' }
+  ],
+  NT: [
+    { name: '馬太福音', en: 'Matthew', abbr: 'Mat', chapters: 28, id: 'MAT' }, { name: '馬可福音', en: 'Mark', abbr: 'Mrk', chapters: 16, id: 'MRK' },
+    { name: '路加福音', en: 'Luke', abbr: 'Luk', chapters: 24, id: 'LUK' }, { name: '約翰福音', en: 'John', abbr: 'Jhn', chapters: 21, id: 'JHN' },
+    { name: '使徒行傳', en: 'Acts', abbr: 'Act', chapters: 28, id: 'ACT' }, { name: '羅馬書', en: 'Romans', abbr: 'Rom', chapters: 16, id: 'ROM' },
+    { name: '哥林多前書', en: '1 Corinthians', abbr: '1Co', chapters: 16, id: '1CO' }, { name: '哥林多後書', en: '2 Corinthians', abbr: '2Co', chapters: 13, id: '2CO' },
+    { name: '加拉太書', en: 'Galatians', abbr: 'Gal', chapters: 6, id: 'GAL' }, { name: '以弗所書', en: 'Ephesians', abbr: 'Eph', chapters: 6, id: 'EPH' },
+    { name: '腓立比書', en: 'Philippians', abbr: 'Php', chapters: 4, id: 'PHL' }, { name: '歌羅西書', en: 'Colossians', abbr: 'Col', chapters: 4, id: 'COL' },
+    { name: '帖撒羅尼迦前書', en: '1 Thessalonians', abbr: '1Th', chapters: 5, id: '1TH' }, { name: '帖撒羅尼迦後書', en: '2 Thessalonians', abbr: '2Th', chapters: 3, id: '2TH' },
+    { name: '提摩太前書', en: '1 Timothy', abbr: '1Ti', chapters: 6, id: '1TI' }, { name: '提摩太後書', en: '2 Timothy', abbr: '2Ti', chapters: 4, id: '2TI' },
+    { name: '提多書', en: 'Titus', abbr: 'Tit', chapters: 3, id: 'TIT' }, { name: '腓利門書', en: 'Philemon', abbr: 'Phm', chapters: 1, id: 'PHM' },
+    { name: '希伯來書', en: 'Hebrews', abbr: 'Heb', chapters: 13, id: 'HEB' }, { name: '雅各書', en: 'James', abbr: 'Jas', chapters: 5, id: 'JAS' },
+    { name: '彼得前書', en: '1 Peter', abbr: '1Pe', chapters: 5, id: '1PE' }, { name: '彼得後書', en: '2 Peter', abbr: '2Pe', chapters: 3, id: '2PE' },
+    { name: '約翰一書', en: '1 John', abbr: '1Jn', chapters: 5, id: '1JO' }, { name: '約翰二書', en: '2 John', abbr: '2Jn', chapters: 1, id: '2JO' },
+    { name: '約翰三書', en: '3 John', abbr: '3Jn', chapters: 1, id: '3JO' }, { name: '猶大書', en: 'Jude', abbr: 'Jud', chapters: 1, id: 'JUD' },
+    { name: '啟示錄', en: 'Revelation', abbr: 'Rev', chapters: 22, id: 'REV' }
+  ]
+};
+
+// --- 即時音譯引擎 ---
+const autoTransliterate = (text, isHebrew) => {
+  if (!text) return '';
+  if (isHebrew) {
+    const charMap = {'א':'’', 'ב':'b', 'ג':'g', 'ד':'d', 'ה':'h', 'ו':'v', 'ז':'z', 'ח':'ch', 'ט':'t', 'י':'y', 'כ':'k', 'ך':'k', 'ל':'l', 'מ':'m', 'ם':'m', 'נ':'n', 'ן':'n', 'ס':'s', 'ע':'‘', 'פ':'p', 'ף':'p', 'צ':'ts', 'ץ':'ts', 'ק':'q', 'ר':'r', 'ש':'sh', 'ת':'t'};
+    const vowelMap = {'\u05B0':'e', '\u05B1':'e', '\u05B2':'a', '\u05B3':'o', '\u05B4':'i', '\u05B5':'e', '\u05B6':'e', '\u05B7':'a', '\u05B8':'a', '\u05B9':'o', '\u05BB':'u'};
+    let res = '';
+    for(let char of text) {
+        if(charMap[char]) res += charMap[char];
+        else if(vowelMap[char]) res += vowelMap[char];
+    }
+    return res || '-';
+  } else {
+    const charMap = {'α':'a', 'β':'b', 'γ':'g', 'δ':'d', 'ε':'e', 'ζ':'z', 'η':'ē', 'θ':'th', 'ι':'i', 'κ':'k', 'λ':'l', 'μ':'m', 'ν':'n', 'ξ':'x', 'ο':'o', 'π':'p', 'ρ':'r', 'σ':'s', 'ς':'s', 'τ':'t', 'υ':'y', 'φ':'ph', 'χ':'ch', 'ψ':'ps', 'ω':'ō'};
+    return text.toLowerCase().normalize("NFD").split('').map(c => charMap[c] || c).join('').replace(/[\u0300-\u036f]/g, "").replace(/[^a-zōē\s]/g, '');
+  }
+};
+
+// --- IndexedDB 控制 ---
+const DB_NAME = 'BibleManuscriptDB';
+const STORE_NAME = 'bibles';
+
+const initDB = () => new Promise((resolve, reject) => {
+    try {
+        const request = indexedDB.open(DB_NAME, 2);
+        request.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    } catch (error) {
+        reject(error);
+    }
+});
+
+const saveToDB = async (id, data) => {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).put({ id, data });
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+};
+
+const loadFromDB = async () => {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const request = tx.objectStore(STORE_NAME).getAll();
+    request.onsuccess = () => {
+      const result = {};
+      request.result.forEach(item => { result[item.id] = item.data; });
+      resolve(result);
+    };
+    request.onerror = () => reject(tx.error);
+  });
+};
+
+const clearDB = async () => {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+};
+
+// --- JSON 解析正規化 ---
+const normalizeBibleData = (rawJson) => {
+    const result = {}; 
+    
+    // 檢查是否為字典 (Strongs)
+    if (rawJson && typeof rawJson === 'object' && !Array.isArray(rawJson)) {
+        const keys = Object.keys(rawJson);
+        if (keys.length > 0 && /^[GH]\d+/.test(keys[0])) return rawJson;
+    }
+
+    const allBooks = [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT];
+    const bookMap = {};
+    allBooks.forEach(b => {
+        bookMap[b.name] = b.id; bookMap[b.en] = b.id; bookMap[b.abbr] = b.id;
+        bookMap[b.en.toUpperCase()] = b.id; bookMap[b.abbr.toUpperCase()] = b.id;
+    });
+
+    // 處理常見的縮寫映射
+    const ALIASES = {
+      '1CHR': '1CH', '2CHR': '2CH', '1SAM': '1SA', '2SAM': '2SA', '1KGS': '1KI', '2KGS': '2KI', 
+      'PSALM': 'PSA', 'SONG': 'SNG', 'CANTICLES': 'SNG', 'EZEK': 'EZK', 'MATT': 'MAT', 'MARK': 'MRK',
+      'LUKE': 'LUK', 'JOHN': 'JHN', '1COR': '1CO', '2COR': '2CO', '1THESS': '1TH', '2THESS': '2TH', 
+      '1TIM': '1TI', '2TIM': '2TI', 'PHILEM': 'PHM', 'HEB': 'HEB', 'JAMES': 'JAS', '1PET': '1PE',
+      '2PET': '2PE', '1JOHN': '1JO', '2JOHN': '2JO', '3JOHN': '3JO', 'REV': 'REV'
+    };
+
+    const getBookId = (name) => {
+        if (!name) return null;
+        let n = String(name).trim();
+        let upper = n.toUpperCase();
+        if (ALIASES[upper]) return ALIASES[upper];
+        if (bookMap[n]) return bookMap[n];
+        if (bookMap[upper]) return bookMap[upper];
+        const found = allBooks.find(b => b.name === n || b.en.toUpperCase() === upper || b.abbr.toUpperCase() === upper);
+        return found ? found.id : null;
+    };
+
+    const ensurePath = (bId, ch) => {
+      if(!result[bId]) result[bId] = {};
+      if(!result[bId][ch]) result[bId][ch] = {};
+    };
+
+    try {
+        // 格式 A: 陣列 [{book_name, chapter, verse, text}] (如 LXX)
+        if (Array.isArray(rawJson) && rawJson[0]?.chapter !== undefined) {
+            rawJson.forEach(row => {
+                const bId = getBookId(row.book_name || row.book_abbr || row.book || row.book_id);
+                if (bId) {
+                    ensurePath(bId, row.chapter);
+                    result[bId][row.chapter][row.verse] = row.text || row.original || "";
+                }
+            });
+            return result;
+        }
+        
+        // 格式 A2: 陣列 [{book, chapters: [{chapter, verses: [{verse, text}]}]}] (如 NIV)
+        if (Array.isArray(rawJson) && rawJson[0] && (rawJson[0].chapters || rawJson[0].verses)) {
+          rawJson.forEach(bookData => {
+              const bId = getBookId(bookData.book || bookData.book_name || bookData.name);
+              if (bId) {
+                  (bookData.chapters || []).forEach(chData => {
+                      const ch = chData.chapter;
+                      ensurePath(bId, ch);
+                      (chData.verses || []).forEach(vData => {
+                          result[bId][ch][vData.verse] = vData.text || vData.original || vData;
+                      });
+                  });
+              }
+          });
+          return result;
+        }
+
+        // 格式 B: 階層式 { "Genesis": { "1": { "1": "text" } } } (如 CUV, WLC, NASB)
+        if (typeof rawJson === 'object' && !Array.isArray(rawJson)) {
+            const root = rawJson.books || rawJson;
+            
+            // 處理 books 可能是陣列的情況 (新譯本 CNV 格式)
+            if (Array.isArray(root)) {
+               root.forEach(bookData => {
+                  const bId = getBookId(bookData.name || bookData.book);
+                  if (bId) {
+                      (bookData.chapters || []).forEach(chData => {
+                          const ch = chData.chapter;
+                          ensurePath(bId, ch);
+                          (chData.verses || []).forEach(vData => {
+                              result[bId][ch][vData.verse] = vData.text || vData.original || vData;
+                          });
+                      });
+                  }
+              });
+              return result;
+            }
+
+            for (let bKey in root) {
+                if (['version', 'language', 'translation', 'count'].includes(bKey)) continue;
+                const bId = getBookId(bKey);
+                if (bId) {
+                    ensurePath(bId, null); // 確保書卷存在
+                    for (let chKey in root[bKey]) {
+                        ensurePath(bId, chKey);
+                        for (let vKey in root[bKey][chKey]) {
+                            result[bId][chKey][vKey] = root[bKey][chKey][vKey];
+                        }
+                    }
+                }
+            }
+            return result;
+        }
+    } catch (e) { console.error("解析錯誤:", e); }
+    return result;
+};
+
+// --- 主元件 ---
+const App = () => {
+  // 安全讀取 localStorage
+  const getSavedState = (key, defaultVal) => {
+    try {
+      const item = localStorage.getItem(key);
+      return item ? JSON.parse(item) : defaultVal;
+    } catch (e) {
+      return defaultVal;
+    }
+  };
+
+  // 安全寫入 localStorage
+  const setSavedState = (key, val) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(val));
+    } catch (e) {}
+  };
+
+  const [appReady, setAppReady] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => getSavedState('bible_dark', false));
+  const [activeTab, setActiveTab] = useState('home');
+  const [viewState, setViewState] = useState(() => getSavedState('bible_view', { book: '創世記', bookId: 'GEN', chapter: 1 }));
+  const [loadedBibles, setLoadedBibles] = useState({});
+  const [fetching, setFetching] = useState(false);
+  const [verses, setVerses] = useState([]);
+  
+  // 設定狀態
+  const [readVersion, setReadVersion] = useState('zh-cuv');
+  const [readingMode, setReadingMode] = useState('verse');
+  const [fontSize, setFontSize] = useState(16);
+  const [layoutMode, setLayoutMode] = useState('vertical');
+  const [verticalSlots, setVerticalSlots] = useState(['zh-cuv', 'en-niv', 'orig-wlc']);
+  const [horizVersions, setHorizVersions] = useState({ zh: 'cuv', en: 'niv', orig: 'orig-wlc' });
+  const [bookmarks, setBookmarks] = useState(() => getSavedState('bible_bookmarks', []));
+
+  // 匯入與導航狀態
+  const [importTarget, setImportTarget] = useState('zh-cuv');
+  const [importing, setImporting] = useState(false);
+  const [isNavOpen, setIsNavOpen] = useState(false);
+  const [navStep, setNavStep] = useState('book');
+  const [toastMsg, setToastMsg] = useState('');
+
+  // 字典狀態
+  const [dictOpen, setDictOpen] = useState(false);
+  const [dictQuery, setDictQuery] = useState('');
+  const [dictResults, setDictResults] = useState([]);
+
+  // --- 效果與持久化 ---
+  useEffect(() => {
+    setSavedState('bible_dark', isDarkMode);
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      document.body.style.backgroundColor = '#020617'; 
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.body.style.backgroundColor = '#f8fafc'; 
+    }
+  }, [isDarkMode]);
+
+  useEffect(() => { setSavedState('bible_view', viewState); }, [viewState]);
+  useEffect(() => { setSavedState('bible_bookmarks', bookmarks); }, [bookmarks]);
+
+  useEffect(() => {
+    localStorage.setItem('bible_dark', JSON.stringify(isDarkMode));
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      document.body.style.backgroundColor = '#020617'; 
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.body.style.backgroundColor = '#f8fafc'; 
+    }
+  }, [isDarkMode]);
+
+  useEffect(() => { localStorage.setItem('bible_view', JSON.stringify(viewState)); }, [viewState]);
+  useEffect(() => { localStorage.setItem('bible_bookmarks', JSON.stringify(bookmarks)); }, [bookmarks]);
+
+  useEffect(() => {
+    loadFromDB().then(data => {
+      setLoadedBibles(data);
+      setAppReady(true);
+    }).catch(e => {
+      console.warn("載入資料庫失敗", e);
+      setAppReady(true);
+    });
+  }, []);
+
+  const isBookmarked = useCallback((verseNum) => {
+    return bookmarks.some(b => b.id === `${viewState.bookId}_${viewState.chapter}_${verseNum}`);
+  }, [bookmarks, viewState]);
+
+  const toggleBookmark = (v) => {
+    const id = `${viewState.bookId}_${viewState.chapter}_${v.verseNum}`;
+    if (isBookmarked(v.verseNum)) {
+        setBookmarks(prev => prev.filter(b => b.id !== id));
+        setToastMsg('已移除書籤');
+    } else {
+        setBookmarks(prev => [...prev, { id, book: viewState.book, bookId: viewState.bookId, chapter: viewState.chapter, verse: v.verseNum, text: v.chinese.cuv || v.chinese.ncv || v.chinese.lzz || `Verse ${v.verseNum}` }]);
+        setToastMsg('已加入書籤');
+    }
+    setTimeout(() => setToastMsg(''), 2000);
+  };
+
+  const loadChapter = useCallback(async () => {
+    setFetching(true);
+    
+    // 簡單的 Demo 數據提供，若完全沒匯入
+    const isDemo = Object.keys(loadedBibles).length === 0;
+
+    // 找該章節最大節數
+    let maxV = isDemo ? 5 : 1; 
+    Object.values(loadedBibles).forEach(bible => {
+        const bData = bible[viewState.bookId];
+        if (bData && bData[viewState.chapter]) {
+            const vKeys = Object.keys(bData[viewState.chapter]).map(Number).filter(n => !isNaN(n));
+            if (vKeys.length > 0) maxV = Math.max(maxV, ...vKeys);
+        }
+    });
+
+    const isOT = BIBLE_STRUCTURE.OT.some(b => b.id === viewState.bookId);
+    const newVerses = [];
+    for (let i = 1; i <= maxV; i++) {
+        let cuv = loadedBibles['zh-cuv']?.[viewState.bookId]?.[viewState.chapter]?.[i];
+        let wlc = loadedBibles['orig-wlc']?.[viewState.bookId]?.[viewState.chapter]?.[i];
+        
+        if (isDemo && viewState.bookId === 'GEN' && viewState.chapter === 1) {
+            if (i === 1) { cuv = "起初，神創造天地。"; wlc = "בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַשָּׁמַיִם וְאֵת הָאָרֶץ"; }
+            if (i === 2) cuv = "地是空虛混沌，淵面黑暗；神的靈運行在水面上。";
+        }
+
+        newVerses.push({
+            verseNum: i,
+            paragraphStart: i === 1,
+            chinese: {
+                cuv: cuv || "",
+                lzz: loadedBibles['zh-lzz']?.[viewState.bookId]?.[viewState.chapter]?.[i] || "",
+                ncv: loadedBibles['zh-ncv']?.[viewState.bookId]?.[viewState.chapter]?.[i] || "",
+            },
+            english: {
+                niv: loadedBibles['en-niv']?.[viewState.bookId]?.[viewState.chapter]?.[i] || "",
+                nasb: loadedBibles['en-nasb']?.[viewState.bookId]?.[viewState.chapter]?.[i] || "",
+                kjv: loadedBibles['en-kjv']?.[viewState.bookId]?.[viewState.chapter]?.[i] || "",
+            },
+            original: {
+                'orig-wlc': wlc || "",
+                'orig-lxx': loadedBibles['orig-lxx']?.[viewState.bookId]?.[viewState.chapter]?.[i] || "",
+                'orig-na28': loadedBibles['orig-na28']?.[viewState.bookId]?.[viewState.chapter]?.[i] || ""
+            },
+            isOT
+        });
+    }
+    
+    // 補上尚未匯入的提示
+    newVerses.forEach(v => {
+        ['cuv', 'lzz', 'ncv'].forEach(k => { if(!v.chinese[k]) v.chinese[k] = `[尚未匯入]`; });
+        ['niv', 'nasb', 'kjv'].forEach(k => { if(!v.english[k]) v.english[k] = `[尚未匯入]`; });
+        ['orig-wlc', 'orig-lxx', 'orig-na28'].forEach(k => { if(!v.original[k]) v.original[k] = `[尚未匯入]`; });
+    });
+
+    setVerses(newVerses);
+    setTimeout(() => setFetching(false), 200);
+  }, [viewState, loadedBibles]);
+
+  useEffect(() => {
+    if (appReady && (activeTab === 'read' || activeTab === 'compare')) loadChapter();
+  }, [appReady, activeTab, loadChapter]);
+
+  // --- 操作 ---
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImporting(true);
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+        try {
+            const json = JSON.parse(evt.target.result);
+            const normalized = normalizeBibleData(json);
+            
+            if (Object.keys(normalized).length > 0) {
+              await saveToDB(importTarget, normalized);
+              setLoadedBibles(prev => ({ ...prev, [importTarget]: normalized }));
+              setToastMsg(`✅ ${importTarget.toUpperCase()} 匯入成功`);
+            } else {
+              setToastMsg('❌ 匯入失敗：無法識別 JSON 結構');
+            }
+        } catch (err) { 
+            console.error("匯入錯誤", err);
+            setToastMsg('❌ 儲存失敗：請確定為正確 JSON 或檢查瀏覽器儲存權限'); 
+        }
+        setImporting(false);
+        e.target.value = '';
+    };
+    reader.readAsText(file);
+  };
+
+  const executeDictSearch = (query) => {
+      const q = query.trim().toLowerCase();
+      if (!q || !loadedBibles['dict-strongs']) return [];
+      
+      const results = [];
+      const dict = loadedBibles['dict-strongs'];
+      
+      for (const [strongs, data] of Object.entries(dict)) {
+          if (
+              strongs.toLowerCase() === q ||
+              (data.lemma && data.lemma.toLowerCase().includes(q)) ||
+              (data.strongs_definition && data.strongs_definition.toLowerCase().includes(q)) ||
+              (data.kjv_definition && data.kjv_definition.toLowerCase().includes(q))
+          ) {
+              results.push({ strongs, ...data });
+          }
+          if (results.length >= 15) break; 
+      }
+      return results;
+  };
+
+  const handleWordClick = (word) => {
+    const clean = word.replace(/[.,;·׃]/g, '').trim();
+    setDictQuery(clean);
+    setDictResults(executeDictSearch(clean));
+    setDictOpen(true);
+  };
+
+  const getVerseText = (verse, config) => {
+    const [lang, ver] = config.split('-');
+    if (lang === 'zh') return verse.chinese[ver];
+    if (lang === 'en') return verse.english[ver];
+    if (lang === 'orig') return verse.original[config];
+    return "[未知]";
+  };
+
+  // --- 渲染子組件 ---
+  const renderOriginal = (v, config, fs, isParagraphMode = false) => {
+      const text = v.original[config] || "";
+      if (!text || text.startsWith('[')) return <span style={{ fontSize: `${fs}px` }} className="text-slate-400 dark:text-slate-500 font-medium">尚未匯入</span>;
+      
+      const isHebrew = config === 'orig-wlc';
+      const words = text.split(/\s+/).filter(w => w);
+      const dir = isHebrew ? 'rtl' : 'ltr';
+
+      const renderedWords = words.map((w, i) => (
+          <span key={i} onClick={() => handleWordClick(w)} className="inline-flex flex-col items-center cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded p-1 transition-colors group">
+            <span style={{ fontSize: `${fs}px` }} className={`font-bold leading-none ${v.isOT ? 'text-indigo-900 dark:text-indigo-300' : 'text-emerald-900 dark:text-emerald-300'}`}>{w}</span>
+            <span className="text-[10px] text-amber-800 dark:text-amber-500 italic mt-1 leading-none group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors" dir="ltr">{autoTransliterate(w, isHebrew)}</span>
+          </span>
+      ));
+
+      if (isParagraphMode) {
+        return <span className="inline-flex flex-wrap gap-x-1.5 gap-y-1 align-bottom mx-1" dir={dir}>{renderedWords}</span>;
+      }
+
+      return (
+        <div className={`flex flex-wrap gap-x-2 gap-y-3 content-start flex-1 ${dir === 'rtl' ? 'justify-start' : ''}`} dir={dir}>
+          {renderedWords}
+        </div>
+      );
+  };
+
+  if (!appReady) return (
+    <div className={`h-screen w-full flex flex-col items-center justify-center ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-900 text-white'}`}>
+      <Loader2 className="w-10 h-10 animate-spin text-indigo-500 mb-4" />
+      <div className="font-black tracking-widest animate-pulse">MANUSCRIPT SYNC</div>
+    </div>
+  );
+
+  return (
+    <div className={`h-[100dvh] flex flex-col overflow-hidden transition-colors ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
+      
+      {/* Toast */}
+      {toastMsg && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[200] bg-indigo-600 dark:bg-indigo-500 text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg animate-in slide-in-from-top fade-in duration-300 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4" /> {toastMsg} 
+        </div>
+      )}
+
+      {/* 導航側欄 */}
+      {isNavOpen && (
+        <div className="fixed inset-0 z-[150] bg-slate-50 dark:bg-slate-950 flex flex-col animate-in slide-in-from-bottom duration-300">
+           <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900 sticky top-0 shadow-sm transition-colors">
+              <button onClick={() => navStep === 'chapter' ? setNavStep('book') : setIsNavOpen(false)} className="w-10 h-10 flex items-center justify-center bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl active:scale-95 transition-colors">
+                 {navStep === 'chapter' ? <ChevronLeft className="text-slate-700 dark:text-slate-300"/> : <X className="text-slate-700 dark:text-slate-300"/>}
+              </button>
+              <h2 className="font-black text-lg text-slate-800 dark:text-slate-100">{navStep === 'book' ? '選擇書卷' : viewState.book}</h2>
+              <div className="w-10"></div>
+           </div>
+           <div className="flex-1 overflow-y-auto p-4">
+              {navStep === 'book' ? (
+                <div className="space-y-6 pb-20">
+                   {['OT', 'NT'].map(t => (
+                      <div key={t}>
+                         <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 tracking-widest mb-3 px-1">{t === 'OT' ? '舊約 OLD TESTAMENT' : '新約 NEW TESTAMENT'}</h3>
+                         <div className="grid grid-cols-4 gap-2">
+                            {BIBLE_STRUCTURE[t].map(b => (
+                               <button key={b.id} onClick={() => { setViewState(p => ({...p, book: b.name, bookId: b.id})); setNavStep('chapter'); }} className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all active:scale-95 ${viewState.bookId === b.id ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200'}`}>
+                                  <span className="text-[11px] font-black">{b.name}</span>
+                               </button>
+                            ))}
+                         </div>
+                      </div>
+                   ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-5 gap-2 pb-20">
+                   {Array.from({ length: [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT].find(b => b.id === viewState.bookId).chapters }, (_, i) => i + 1).map(ch => (
+                      <button key={ch} onClick={() => { setViewState(p => ({...p, chapter: ch})); setIsNavOpen(false); }} className={`aspect-square flex items-center justify-center rounded-xl font-black border text-sm active:scale-95 transition-all ${viewState.chapter === ch ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200'}`}>
+                         {ch}
+                      </button>
+                   ))}
+                </div>
+              )}
+           </div>
+        </div>
+      )}
+
+      {/* 字典彈窗 */}
+      {dictOpen && (
+        <div className="fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-200">
+           <div className="bg-white dark:bg-slate-900 w-full max-w-lg h-[80vh] sm:h-auto sm:max-h-[85vh] rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800 animate-in slide-in-from-bottom-4">
+              <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+                 <h3 className="font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-indigo-500" /> Strong's 字典搜尋
+                 </h3>
+                 <button onClick={() => setDictOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 transition-colors">
+                    <X className="w-4 h-4"/>
+                 </button>
+              </div>
+              <div className="p-4 flex flex-col gap-4 flex-1 overflow-hidden">
+                 <div className="flex gap-2 relative">
+                    <input 
+                       value={dictQuery} 
+                       onChange={e => {
+                          setDictQuery(e.target.value);
+                          setDictResults(executeDictSearch(e.target.value));
+                       }} 
+                       className="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-slate-200 outline-none focus:border-indigo-500 transition-colors" 
+                       placeholder="輸入希臘文、希伯來文或 Strong's 編號..." 
+                    />
+                    <div className="w-12 h-12 shrink-0 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
+                        <Search className="w-5 h-5" />
+                    </div>
+                 </div>
+                 <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 p-3">
+                    {!loadedBibles['dict-strongs'] ? (
+                        <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs font-bold text-center px-4">
+                            <Database className="w-8 h-8 mb-3 opacity-50" />
+                            請先在「設定」頁面匯入 Strong's 字典 (JSON)，<br/>才能在這裡查找字義。
+                        </div>
+                    ) : dictResults.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs font-bold text-center px-4">
+                            找不到完全符合的字詞。<br/><br/>
+                            <span className="font-normal opacity-80">注意：聖經原文有動詞與名詞的變化，但字典只收錄「原型字(Lemma)」。請嘗試縮短搜尋字眼。</span>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                           {dictResults.map((r, i) => (
+                               <div key={i} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 shadow-sm">
+                                  <div className="flex justify-between items-start mb-2">
+                                     <div className="flex items-center gap-2">
+                                        <span className="text-sm font-black text-indigo-700 dark:text-indigo-400">{r.lemma}</span>
+                                        <span className="text-xs italic text-amber-600 dark:text-amber-500">{r.transliteration}</span>
+                                     </div>
+                                     <span className="text-[10px] font-black bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-500">{r.strongs}</span>
+                                  </div>
+                                  <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 leading-relaxed">
+                                     <span className="text-slate-400 dark:text-slate-500 font-normal mr-1">定義:</span> {r.strongs_definition}
+                                  </p>
+                                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                                     <span className="font-normal mr-1">KJV:</span> {r.kjv_definition}
+                                  </p>
+                               </div>
+                           ))}
+                        </div>
+                    )}
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* 標頭 */}
+      <header className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 px-3 py-2.5 z-50 shrink-0 shadow-sm transition-colors duration-300">
+        <div className="flex justify-between items-center max-w-lg mx-auto w-full">
+           <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              <button onClick={() => { setIsNavOpen(true); setNavStep('book'); }} className="flex items-center gap-1 active:scale-95 transition-all bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-2.5 h-[34px] rounded-lg border border-slate-200 dark:border-slate-700 shrink-0">
+                 <Menu className="w-4 h-4 text-indigo-600 dark:text-indigo-400"/>
+                 <span className="font-black text-[13px] text-slate-700 dark:text-slate-200 truncate max-w-[80px]">{viewState.book} {viewState.chapter}</span>
+                 <ChevronDown className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500"/>
+              </button>
+
+              {activeTab === 'read' && (
+                 <div className="flex items-center gap-1.5 flex-1 overflow-hidden">
+                    <div className="flex items-center bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 h-[34px] shrink-0">
+                       <button onClick={() => setFontSize(s => Math.max(12, s-1))} className="px-2 h-full text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-100 dark:hover:bg-slate-800">-</button>
+                       <span className="text-[11px] font-black w-4 text-center text-slate-700 dark:text-slate-300">{fontSize}</span>
+                       <button onClick={() => setFontSize(s => Math.min(32, s+1))} className="px-2 h-full text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-100 dark:hover:bg-slate-800">+</button>
+                    </div>
+                    <div className="relative shrink-0 flex-1 max-w-[100px]">
+                       <select value={readVersion} onChange={e => setReadVersion(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-black text-indigo-600 dark:text-indigo-400 h-[34px] pl-2 pr-6 appearance-none outline-none truncate cursor-pointer">
+                          <optgroup label="中文"><option value="zh-cuv">和合本 (CUV)</option><option value="zh-lzz">呂振中 (LZZ)</option><option value="zh-ncv">新譯本 (NCV)</option></optgroup>
+                          <optgroup label="英文"><option value="en-niv">NIV</option><option value="en-nasb">NASB</option><option value="en-kjv">KJV</option></optgroup>
+                          <optgroup label="原文 (含音譯)"><option value="orig-wlc">WLC 希伯來文</option><option value="orig-lxx">LXX 七十士譯本</option><option value="orig-na28">NA28 新約</option></optgroup>
+                       </select>
+                       <ChevronDown className="w-3.5 h-3.5 text-indigo-400 dark:text-indigo-500 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+                 </div>
+              )}
+           </div>
+
+           <div className="flex gap-1.5 shrink-0 pl-1.5">
+              {activeTab === 'read' ? (
+                 <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 h-[34px] items-center">
+                    <button onClick={() => setReadingMode('verse')} className={`p-1.5 rounded-md transition-all ${readingMode === 'verse' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}><AlignLeft className="w-4 h-4"/></button>
+                    <button onClick={() => setReadingMode('paragraph')} className={`p-1.5 rounded-md transition-all ${readingMode === 'paragraph' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}><AlignJustify className="w-4 h-4"/></button>
+                 </div>
+              ) : activeTab === 'compare' ? (
+                 <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 h-[34px] items-center">
+                    <button onClick={() => setLayoutMode('vertical')} className={`p-1.5 rounded-md transition-all ${layoutMode === 'vertical' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}><List className="w-4 h-4" /></button>
+                    <button onClick={() => setLayoutMode('horizontal')} className={`p-1.5 rounded-md transition-all ${layoutMode === 'horizontal' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}><Columns className="w-4 h-4" /></button>
+                 </div>
+              ) : null}
+              <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-[34px] h-[34px] flex items-center justify-center rounded-lg border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                 {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-500" />}
+              </button>
+           </div>
+        </div>
+      </header>
+
+      {/* 主內容區 */}
+      <main className="flex-1 overflow-y-auto max-w-lg mx-auto w-full relative">
+         {activeTab === 'home' && (
+            <div className="px-6 py-10 flex flex-col h-full animate-in fade-in">
+               <div className="flex flex-col items-center justify-center py-10 gap-4 mb-8 border-b border-slate-200 dark:border-slate-800 pb-12">
+                  <div className="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center shadow-lg relative">
+                     <Book className="w-10 h-10 text-white" />
+                     <Sparkles className="absolute -top-2 -right-2 text-amber-400 w-6 h-6 animate-pulse" />
+                  </div>
+                  <h1 className="text-xl font-black tracking-widest text-slate-800 dark:text-slate-100 uppercase mt-2">Bible Explorer</h1>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500">聖經原文對照探索器</p>
+               </div>
+               
+               <div className="flex-1">
+                  <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2"><Bookmark className="w-4 h-4"/> 最近標記</h3>
+                  {bookmarks.length > 0 ? (
+                    <div className="space-y-3 pb-20">
+                      {bookmarks.slice(-10).reverse().map(b => (
+                        <div key={b.id} onClick={() => { setViewState({ book: b.book, bookId: b.bookId, chapter: b.chapter }); setActiveTab('read'); }} className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-500">
+                           <div className="flex justify-between items-start mb-2">
+                              <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400">{b.book} {b.chapter}:{b.verse}</span>
+                              <button onClick={(e) => { e.stopPropagation(); toggleBookmark({verseNum: b.verse}); }} className="text-slate-300 dark:text-slate-600 hover:text-red-500"><X className="w-4 h-4"/></button>
+                           </div>
+                           <div className="text-sm font-bold text-slate-700 dark:text-slate-300 line-clamp-2">{b.text}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="py-10 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl text-center text-xs text-slate-400 dark:text-slate-500 font-bold bg-white dark:bg-slate-900">
+                      尚無書籤，在讀經時點擊標籤圖示即可加入
+                    </div>
+                  )}
+               </div>
+            </div>
+         )}
+
+         {activeTab === 'read' && (
+            <div className="px-4 py-6 pb-40">
+               {fetching ? (
+                  <div className="flex flex-col items-center justify-center py-32 text-indigo-400 gap-4">
+                     <Loader2 className="w-8 h-8 animate-spin" />
+                     <span className="text-[10px] font-black tracking-widest uppercase">Loading...</span>
+                  </div>
+               ) : (
+                  <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-sm text-justify transition-colors duration-300">
+                     {readingMode === 'verse' ? (
+                       <div className="space-y-4">
+                         {verses.map(v => (
+                           <div key={v.verseNum} className="relative group">
+                              <div className="flex items-start">
+                                 <span className="text-indigo-500 dark:text-indigo-400 font-black mr-2 text-[11px] cursor-pointer hover:bg-indigo-100 px-1.5 py-0.5 rounded shrink-0 relative top-[2px]">{v.verseNum}</span>
+                                 {readVersion.startsWith('orig') ? renderOriginal(v, readVersion, fontSize, false) : (
+                                    <span style={{ fontSize: `${fontSize}px` }} className="text-slate-800 dark:text-slate-200 font-medium leading-relaxed flex-1">{getVerseText(v, readVersion)}</span>
+                                 )}
+                                 <button onClick={() => toggleBookmark(v)} className={`ml-2 p-1 rounded-full shrink-0 transition-colors ${isBookmarked(v.verseNum) ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' : 'text-slate-200 dark:text-slate-600 hover:text-amber-400'}`}>
+                                    {isBookmarked(v.verseNum) ? <BookmarkCheck className="w-4 h-4"/> : <Bookmark className="w-4 h-4"/>}
+                                 </button>
+                              </div>
+                           </div>
+                         ))}
+                       </div>
+                     ) : (
+                       <>
+                         {verses.map((v, idx) => (
+                           <React.Fragment key={v.verseNum}>
+                              {(v.paragraphStart && idx !== 0) && <div className="w-full h-1.5 flex shrink-0"></div>}
+                              <span className="inline">
+                                 <span className="text-indigo-500 dark:text-indigo-400 font-black mx-1 text-[11px] cursor-pointer hover:bg-indigo-100 px-1.5 py-0.5 rounded relative bottom-[2px]">{v.verseNum}</span>
+                                 {readVersion.startsWith('orig') ? renderOriginal(v, readVersion, fontSize, true) : (
+                                    <span style={{ fontSize: `${fontSize}px` }} className="text-slate-800 dark:text-slate-200 font-medium leading-loose">{getVerseText(v, readVersion)}</span>
+                                 )}
+                                 <button onClick={() => toggleBookmark(v)} className={`inline-flex align-middle mx-1 -mt-1 transition-colors ${isBookmarked(v.verseNum) ? 'text-amber-500' : 'text-slate-200 dark:text-slate-600 hover:text-amber-400'}`}>
+                                    {isBookmarked(v.verseNum) ? <BookmarkCheck className="w-3.5 h-3.5"/> : <Bookmark className="w-3.5 h-3.5"/>}
+                                 </button>
+                              </span>
+                           </React.Fragment>
+                         ))}
+                       </>
+                     )}
+                  </div>
+               )}
+            </div>
+         )}
+
+         {activeTab === 'compare' && (
+            <div className="px-4 py-6 space-y-5 pb-40">
+               {fetching ? (
+                  <div className="flex flex-col items-center justify-center py-32 text-indigo-400 gap-4"><Loader2 className="w-8 h-8 animate-spin" /></div>
+               ) : (
+                 verses.map(verse => (
+                  <div key={verse.verseNum} className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm transition-colors duration-300">
+                     <div className="px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+                        <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Verse {verse.verseNum}</span>
+                        <button onClick={() => toggleBookmark(verse)} className={isBookmarked(verse.verseNum) ? 'text-amber-500' : 'text-slate-300 dark:text-slate-600 hover:text-amber-400'}>
+                           {isBookmarked(verse.verseNum) ? <BookmarkCheck className="w-4 h-4"/> : <Bookmark className="w-4 h-4"/>}
+                        </button>
+                     </div>
+                     <div className="p-4 sm:p-5">
+                        {layoutMode === 'vertical' ? (
+                           <div className="space-y-4">
+                              {verticalSlots.map((slot, sIdx) => (
+                                 <div key={sIdx} className={sIdx > 0 ? "pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-2" : "flex flex-col sm:flex-row gap-2"}>
+                                    <div className="flex flex-col gap-1.5 mb-1 shrink-0 w-auto sm:w-24">
+                                       <select value={slot} onChange={(e) => { const n = [...verticalSlots]; n[sIdx] = e.target.value; setVerticalSlots(n); }} className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest bg-transparent border-none p-0 focus:ring-0 cursor-pointer outline-none">
+                                          <optgroup label="中文"><option value="zh-cuv">和合本</option><option value="zh-lzz">呂振中</option><option value="zh-ncv">新譯本</option></optgroup>
+                                          <optgroup label="英文"><option value="en-niv">NIV</option><option value="en-nasb">NASB</option><option value="en-kjv">KJV</option></optgroup>
+                                          <optgroup label="原文"><option value="orig-wlc">WLC 希伯來文</option><option value="orig-lxx">LXX 七十士譯本</option><option value="orig-na28">NA28 新約</option></optgroup>
+                                       </select>
+                                    </div>
+                                    <div className="flex-1 w-full">
+                                       {slot.startsWith('orig') ? renderOriginal(verse, slot, fontSize, false) : (
+                                          <p style={{ fontSize: `${fontSize}px` }} className={`w-full ${slot.startsWith('en') ? 'italic font-serif text-slate-600 dark:text-slate-400' : 'font-bold text-slate-800 dark:text-slate-200'} leading-relaxed`}>{getVerseText(verse, slot)}</p>
+                                       )}
+                                    </div>
+                                 </div>
+                              ))}
+                           </div>
+                        ) : (
+                           <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr] gap-4">
+                              {/* 水平模式 */}
+                              <div className="border-b sm:border-b-0 sm:border-r border-slate-200 dark:border-slate-800 pb-3 sm:pb-0 sm:pr-3 flex flex-col">
+                                 <div className="mb-3 inline-block">
+                                    <select value={horizVersions.zh} onChange={e => setHorizVersions({...horizVersions, zh: e.target.value})} className="text-[10px] font-black text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded py-1 pl-2 pr-2 outline-none cursor-pointer">
+                                       <option value="cuv">和合本</option><option value="lzz">呂振中</option><option value="ncv">新譯本</option>
+                                    </select>
+                                 </div>
+                                 <p style={{ fontSize: `${fontSize}px` }} className="font-bold text-slate-800 dark:text-slate-200 leading-relaxed">{verse.chinese[horizVersions.zh] || "尚未匯入"}</p>
+                              </div>
+                              <div className="border-b sm:border-b-0 sm:border-r border-slate-200 dark:border-slate-800 pb-3 sm:pb-0 sm:pr-3 flex flex-col">
+                                 <div className="mb-3 inline-block">
+                                    <select value={horizVersions.en} onChange={e => setHorizVersions({...horizVersions, en: e.target.value})} className="text-[10px] font-black text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded py-1 pl-2 pr-2 outline-none cursor-pointer">
+                                       <option value="niv">NIV</option><option value="nasb">NASB</option><option value="kjv">KJV</option>
+                                    </select>
+                                 </div>
+                                 <p style={{ fontSize: `${fontSize}px` }} className="italic font-serif text-slate-600 dark:text-slate-400 leading-relaxed">{verse.english[horizVersions.en] || "尚未匯入"}</p>
+                              </div>
+                              <div className="flex flex-col">
+                                 <div className="mb-3 inline-block">
+                                    <select value={horizVersions.orig} onChange={e => setHorizVersions({...horizVersions, orig: e.target.value})} className="text-[10px] font-black text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/20 rounded py-1 pl-2 pr-2 outline-none cursor-pointer">
+                                       <option value="orig-wlc">WLC 希伯來文</option><option value="orig-lxx">LXX 七十士譯本</option><option value="orig-na28">NA28 新約</option>
+                                    </select>
+                                 </div>
+                                 <div className="w-full">{renderOriginal(verse, horizVersions.orig, fontSize, false)}</div>
+                              </div>
+                           </div>
+                        )}
+                     </div>
+                  </div>
+                 ))
+               )}
+            </div>
+         )}
+
+         {activeTab === 'settings' && (
+            <div className="px-6 py-10 flex flex-col h-full animate-in fade-in overflow-y-auto pb-40">
+               <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-widest uppercase mb-8">Settings</h2>
+               
+               <div className="space-y-6">
+                  {/* 深色模式設定 */}
+                  <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 p-5 shadow-sm transition-colors duration-300">
+                     <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-4">
+                           <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center transition-colors">
+                              {isDarkMode ? <Moon className="w-6 h-6 text-indigo-400" /> : <Sun className="w-6 h-6 text-amber-500" />}
+                           </div>
+                           <div>
+                              <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm">深色模式 (Dark Mode)</h3>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">切換應用程式的外觀主題配色</p>
+                           </div>
+                        </div>
+                        <button onClick={() => setIsDarkMode(!isDarkMode)} className={`w-14 h-8 rounded-full transition-colors relative flex items-center px-1 shadow-inner ${isDarkMode ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700'}`}>
+                           <div className={`w-6 h-6 bg-white rounded-full shadow transition-transform duration-300 ${isDarkMode ? 'translate-x-6' : 'translate-x-0'}`} />
+                        </button>
+                     </div>
+                  </div>
+
+                  {/* 資料庫匯入模組 */}
+                  <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 p-5 shadow-sm transition-colors duration-300">
+                     <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center">
+                           <Database className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                        </div>
+                        <div>
+                           <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm">本地資料庫 (Local Database)</h3>
+                           <p className="text-xs text-slate-500 dark:text-slate-400">管理離線儲存的經文與字典</p>
+                        </div>
+                     </div>
+                     
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6">
+                        {[
+                          { id: 'zh-cuv', label: '和合本 (CUV)' }, { id: 'zh-lzz', label: '呂振中 (LZZ)' }, { id: 'zh-ncv', label: '新譯本 (NCV)' },
+                          { id: 'en-niv', label: 'NIV' }, { id: 'en-nasb', label: 'NASB' }, { id: 'en-kjv', label: 'KJV' },
+                          { id: 'orig-wlc', label: 'WLC 原文 (希伯來文)' }, { id: 'orig-lxx', label: 'LXX 譯本 (希臘文)' }, { id: 'orig-na28', label: 'NA28 新約 (希臘文)' },
+                          { id: 'dict-strongs', label: 'Strongs 字典 (點字查詢)' }
+                        ].map(ver => (
+                           <div key={ver.id} className="flex justify-between items-center text-xs p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                              <span className="font-bold text-slate-700 dark:text-slate-300">{ver.label}</span>
+                              {loadedBibles[ver.id] ? 
+                                 <span className="text-emerald-500 font-black flex items-center gap-1"><CheckCircle2 className="w-3 h-3"/> 已載入</span> : 
+                                 <span className="text-slate-400 dark:text-slate-600">尚未匯入</span>
+                              }
+                           </div>
+                        ))}
+                     </div>
+
+                     <div className="flex flex-col gap-3 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/50 rounded-xl">
+                        <select value={importTarget} onChange={e => setImportTarget(e.target.value)} className="p-2.5 rounded-lg text-sm font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none text-indigo-700 dark:text-indigo-300">
+                           <option value="zh-cuv">匯入為：和合本 (CUV)</option>
+                           <option value="zh-lzz">匯入為：呂振中 (LZZ)</option>
+                           <option value="zh-ncv">匯入為：新譯本 (CNV/NCV)</option>
+                           <option value="en-niv">匯入為：NIV</option>
+                           <option value="en-nasb">匯入為：NASB</option>
+                           <option value="en-kjv">匯入為：KJV</option>
+                           <option value="orig-wlc">匯入為：WLC 原文 (希伯來文)</option>
+                           <option value="orig-lxx">匯入為：LXX 七十士譯本 (希臘文)</option>
+                           <option value="orig-na28">匯入為：NA28 新約原文 (希臘文)</option>
+                           <option value="dict-strongs">匯入為：Strongs 字典 (點字查詢用)</option>
+                        </select>
+                        
+                        <div className="relative">
+                           <input type="file" accept=".json" onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                           <div className="w-full flex items-center justify-center gap-2 p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-black text-sm transition-colors cursor-pointer active:scale-[0.98]">
+                              {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Book className="w-4 h-4" />}
+                              {importing ? '解析並儲存中...' : '選擇 JSON 檔案並匯入'}
+                           </div>
+                        </div>
+                        <p className="text-[10px] text-slate-500 text-center mt-1">內建即時音譯引擎，無需額外匯入音譯檔案。匯入字典後，點擊原文字可查字義。</p>
+                     </div>
+
+                     <button onClick={async () => { if(window.confirm('確定要刪除所有已匯入的聖經資料庫嗎？（你需要重新上傳 JSON）')) { await clearDB(); setLoadedBibles({}); setToastMsg('資料庫已清空'); } }} className="mt-6 w-full py-3 text-xs font-bold text-red-500 hover:text-red-600 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-xl transition-colors active:scale-[0.98]">
+                        清除所有已匯入資料 (重置資料庫)
+                     </button>
+                  </div>
+               </div>
+            </div>
+         )}
+
+         {/* 浮動導航列：上一章/下一章 */}
+         {(activeTab === 'read' || activeTab === 'compare') && !fetching && (
+            <div className="fixed bottom-[90px] left-0 right-0 px-4 max-w-lg mx-auto z-40">
+               <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 p-1.5 rounded-2xl shadow-lg flex gap-1.5 transition-colors duration-300">
+                  <button onClick={() => setViewState(v => ({...v, chapter: Math.max(1, v.chapter - 1)}))} className="flex-[1.2] py-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-black text-xs flex items-center justify-center gap-1 active:scale-95 transition-all">
+                     <ChevronsLeft className="w-4 h-4" /> 上一章
+                  </button>
+                  <div className="flex-[0.8] relative flex">
+                     <select value={viewState.chapter} onChange={(e) => setViewState(v => ({ ...v, chapter: parseInt(e.target.value) }))} className="w-full appearance-none bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800/50 rounded-xl text-indigo-500 dark:text-indigo-400 font-black text-[11px] text-center outline-none cursor-pointer py-2.5 transition-colors" style={{ textAlignLast: 'center' }}>
+                        {Array.from({ length: [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT].find(b => b.id === viewState.bookId).chapters }, (_, i) => i + 1).map(ch => (
+                           <option key={ch} value={ch}>CH {ch}</option>
+                        ))}
+                     </select>
+                     <ChevronDown className="w-3 h-3 text-indigo-400 dark:text-indigo-500 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                  <button onClick={() => setViewState(v => ({...v, chapter: v.chapter + 1}))} className="flex-[1.2] py-2.5 bg-indigo-600 dark:bg-indigo-500 rounded-xl text-white font-black text-xs flex items-center justify-center gap-1 shadow-md active:scale-95 transition-all hover:bg-indigo-700 dark:hover:bg-indigo-600">
+                     下一章 <ChevronsRight className="w-4 h-4" />
+                  </button>
+               </div>
+            </div>
+         )}
+      </main>
+
+      {/* 底部主導航 */}
+      <nav className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-6 py-2 pb-6 flex justify-between items-center sticky bottom-0 z-50 shadow-[0_-10px_20px_rgba(0,0,0,0.03)] shrink-0 transition-colors duration-300">
+         <TabButton active={activeTab === 'home'} onClick={() => setActiveTab('home')} icon={<Home className="w-5 h-5" />} label="主頁" />
+         <TabButton active={activeTab === 'read'} onClick={() => setActiveTab('read')} icon={<Book className="w-5 h-5" />} label="讀經" />
+         <TabButton active={activeTab === 'compare'} onClick={() => setActiveTab('compare')} icon={<Layers className="w-5 h-5" />} label="對照" />
+         <TabButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<SettingsIcon />} label="設定" />
+      </nav>
+    </div>
+  );
+};
+
+const TabButton = ({ active, icon, label, onClick }) => (
+  <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-500 dark:hover:text-slate-400'}`}>
+    <div className={`p-1.5 rounded-xl transition-colors ${active ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''}`}>{icon}</div>
+    <span className="text-[9px] font-black tracking-tight">{label}</span>
+  </button>
+);
+
+const SettingsIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2l-.2.1a2 2 0 0 1-2.81.25l-.17-.1a2 2 0 0 0-2.81.14l-.31.31a2 2 0 0 0 .14 2.81l.1.17a2 2 0 0 1-.25 2.81l-.1.2a2 2 0 0 0-2 2v.44a2 2 0 0 0 2 2l.1.2a2 2 0 0 1 .25 2.81l-.1.17a2 2 0 0 0-.14 2.81l.31.31a2 2 0 0 0 2.81-.14l.17-.1a2 2 0 0 1 2.81-.25l.2.1a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2l.2-.1a2 2 0 0 1 2.81-.25l.17.1a2 2 0 0 0 2.81-.14l.31-.31a2 2 0 0 0-.14-2.81l-.1-.17a2 2 0 0 1 .25-2.81l.1-.2a2 2 0 0 0 2-2v-.44a2 2 0 0 0-2-2l-.1-.2a2 2 0 0 1-.25-2.81l.1-.17a2 2 0 0 0 .14-2.81l-.31-.31a2 2 0 0 0-2.81.14l-.17.1a2 2 0 0 1-2.81.25l-.2-.1a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+);
+
+export default App;
