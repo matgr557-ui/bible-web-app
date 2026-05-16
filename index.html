@@ -59,6 +59,17 @@
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
 
+<div id="debug-err" style="display:none; background:#ff3333; color:white; padding:15px; position:fixed; top:0; left:0; width:100%; z-index:999999; font-family:sans-serif; font-size:14px; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.3);">
+  🚨 網頁運行出錯：<span id="debug-err-msg"></span>
+</div>
+<script>
+  window.onerror = function(msg, url, line) {
+    document.getElementById('debug-err').style.display = 'block';
+    document.getElementById('debug-err-msg').textContent = msg + " (第 " + line + " 行)";
+    return false;
+  };
+</script>
+    
     <div id="root"></div>
 
     <!-- 核心 React & 邏輯代碼 -->
