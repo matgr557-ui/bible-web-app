@@ -5,12 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Bible Explorer - 聖經原文對照探索器</title>
     
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
         }
     </script>
+    <script src="./js/react.production.min.js"></script>
+    <script src="./js/react-dom.production.min.js"></script>
+    <script src="./js/babel.min.js"></script>
 
     <style>
         /* 核心修復：徹底禁用 Android WebView 系統內建的下拉重新整理 (Pull-to-refresh) 手勢 */
@@ -35,11 +38,6 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
-
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin></script>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
 
@@ -137,7 +135,7 @@
             { name: '馬太福音', en: 'Matthew', abbr: 'Mat', chapters: 28, id: 'MAT' }, { name: '馬可福音', en: 'Mark', abbr: 'Mrk', chapters: 16, id: 'MRK' },
             { name: '路加福音', en: 'Luke', abbr: 'Luk', chapters: 24, id: 'LUK' }, { name: '約翰福音', en: 'John', abbr: 'Jhn', chapters: 21, id: 'JHN' },
             { name: '使徒行傳', en: 'Acts', abbr: 'Act', chapters: 28, id: 'ACT' }, { name: '羅馬書', en: 'Romans', abbr: 'Rom', chapters: 16, id: 'ROM' },
-            { name: '哥林多前書', en: '1 Corinthians', abbr: '1Co', chapters: 16, id: '1CO' }, { name: '哥林多後書', en: '2 Corinthians', abbr: '2Co', chapters: 13, id: '2CO' },
+            { name: '哥林多前書', en: '1 Chronicles', abbr: '1Co', chapters: 16, id: '1CO' }, { name: '哥林多後書', en: '2 Chronicles', abbr: '2Co', chapters: 13, id: '2CO' },
             { name: '加拉太書', en: 'Galatians', abbr: 'Gal', chapters: 6, id: 'GAL' }, { name: '以弗所書', en: 'Ephesians', abbr: 'Eph', chapters: 6, id: 'EPH' },
             { name: '腓立比書', en: 'Philippians', abbr: 'Php', chapters: 4, id: 'PHL' }, { name: '歌羅西書', en: 'Colossians', abbr: 'Col', chapters: 4, id: 'COL' },
             { name: '帖撒羅尼迦前書', en: '1 Thessalonians', abbr: '1Th', chapters: 5, id: '1TH' }, { name: '帖撒羅尼迦後書', en: '2 Thessalonians', abbr: '2Th', chapters: 3, id: '2TH' },
@@ -192,7 +190,6 @@
           });
         };
 
-        // 🔥 新增：從資料庫精準刪除單一指定項目的核心 API
         const deleteFromDB = async (id) => {
           const db = await initDB();
           return new Promise((resolve, reject) => {
@@ -241,7 +238,7 @@
                 bookMap[b.en.toUpperCase()] = b.id; bookMap[b.abbr.toUpperCase()] = b.id;
             });
             
-            // 已完美支援 Exod 等四字特殊標籤
+            // 完美內嵌 'EXOD': 'EXO'，修正出埃及記希伯來 JSON 解析盲點
             const ALIASES = {
               'EXOD': 'EXO', 'DEUT': 'DEU', 'JOSH': 'JSH', 'JUDG': 'JDG',
               '1CHR': '1CH', '2CHR': '2CH', '1SAM': '1SA', '2SAM': '2SA', '1KGS': '1KI', '2KGS': '2KI', 
@@ -414,14 +411,13 @@
               if (mainRef.current) mainRef.current.scrollTop = 0;
           };
 
-          // 🔥 新增：處理單一譯本刪除的點擊事件
           const handleDeleteVersion = async (id, label) => {
               if (window.confirm(`確定要單獨刪除「${label}」的全部數據嗎？`)) {
                   try {
                       await deleteFromDB(id);
                       setLoadedBibles(prev => {
                           const next = { ...prev };
-                          delete next[id]; // 從記憶體狀態中剔除
+                          delete next[id];
                           return next;
                       });
                       setToastMsg(`🗑️ 已成功刪除：${label}`);
@@ -714,7 +710,7 @@
                 </div>
               </header>
 
-              {/* 主內容區：套用 ref 控制，並全面改回 no-scrollbar 隱藏線條 */}
+              {/* 主內容區：套用 ref 控制，並全面隱藏捲動條線條 */}
               <main ref={mainRef} className="flex-1 overflow-y-auto max-w-lg mx-auto w-full relative no-scrollbar">
                  {activeTab === 'home' && (
                     <div className="px-6 py-10 flex flex-col h-full animate-in fade-in">
@@ -945,7 +941,7 @@
                                 </div>
                              </div>
                              
-                             {/* 🔥 核心升級：本地資料庫列表支援「單項獨立刪除」 */}
+                             {/* 本地資料庫清單：精準支援「單項獨立刪除 (X)」 */}
                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6">
                                 {[
                                   { id: 'zh-cuv', label: '和合本 (CUV)' }, { id: 'zh-lzz', label: '呂振中 (LZZ)' }, { id: 'zh-ncv', label: '新譯本 (NCV)' },
@@ -961,11 +957,9 @@
                                       {loadedBibles[ver.id] ? (
                                           <div className="flex items-center gap-2 shrink-0">
                                               <span className="text-emerald-500 font-black flex items-center gap-0.5"><Check className="w-3 h-3"/> 已載入</span>
-                                              {/* 獨立刪除按鈕 */}
                                               <button 
                                                   onClick={() => handleDeleteVersion(ver.id, ver.label)}
                                                   className="w-5 h-5 flex items-center justify-center rounded-md bg-red-50 dark:bg-red-950/40 text-red-500 hover:bg-red-500 hover:text-white active:scale-90 transition-all shadow-sm"
-                                                  title="單獨刪除此項目"
                                               >
                                                   <X className="w-3 h-3" />
                                               </button>
@@ -1008,7 +1002,7 @@
                     </div>
                  )}
 
-                 {/* 右側「上鍵」與「下鍵」翻頁懸浮控制中心 */}
+                 {/* 右側「上鍵」與「下鍵」懸浮翻頁按鈕 */}
                  {(activeTab === 'read' || activeTab === 'compare' || activeTab === 'search') && (
                     <div className="fixed right-4 bottom-[180px] z-[60] flex flex-col gap-3">
                         <button 
