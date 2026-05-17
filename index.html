@@ -21,24 +21,6 @@
             width: 100%;
         }
 
-        /* 專為手機觸控優化的右側高質感滾動條 Bar */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.02);
-        }
-        .dark .custom-scrollbar::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.02);
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background-color: #6366f1;
-            border-radius: 9999px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background-color: #4f46e5;
-        }
-
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideInFromTop { from { transform: translate(-50%, -100%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
         @keyframes slideInFromBottom { from { transform: translateY(100%); } to { transform: translateY(0); } }
@@ -49,7 +31,7 @@
         .slide-in-from-bottom { animation-name: slideInFromBottom; }
         .slide-in-from-bottom-4 { animation-name: slideInFromBottom4; }
         
-        /* 隱藏滾動條但保持功能 */
+        /* 隱藏滾動條但保持功能 (回歸乾淨書卷體驗) */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -64,7 +46,8 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useCallback, Fragment } = React;
+        // 🔥 新增引入 useRef 控制元
+        const { useState, useEffect, useCallback, Fragment, useRef } = React;
         
         // --- 📴 100% 離線純原生內嵌 SVG 圖標引擎 ---
         const ICON_PATHS = {
@@ -117,7 +100,7 @@
         const AlignJustify = (p) => <LucideIcon name="align-justify" {...p} />;
         const Check = (p) => <LucideIcon name="check" {...p} />;
         const Sun = (p) => <LucideIcon name="sun" {...p} />;
-        const Moon = (p) => <LucideIcon name="moon" {...p} animate-pulse />;
+        const Moon = (p) => <LucideIcon name="moon" {...p} />;
         const Database = (p) => <LucideIcon name="database" {...p} />;
         const BookOpen = (p) => <LucideIcon name="book-open" {...p} />;
         const Loader = (p) => (
@@ -155,7 +138,7 @@
             { name: '馬太福音', en: 'Matthew', abbr: 'Mat', chapters: 28, id: 'MAT' }, { name: '馬可福音', en: 'Mark', abbr: 'Mrk', chapters: 16, id: 'MRK' },
             { name: '路加福音', en: 'Luke', abbr: 'Luk', chapters: 24, id: 'LUK' }, { name: '約翰福音', en: 'John', abbr: 'Jhn', chapters: 21, id: 'JHN' },
             { name: '使徒行傳', en: 'Acts', abbr: 'Act', chapters: 28, id: 'ACT' }, { name: '羅馬書', en: 'Romans', abbr: 'Rom', chapters: 16, id: 'ROM' },
-            { name: '哥林多前書', en: '1 Corinthians', abbr: '1Co', chapters: 16, id: '1CO' }, { name: '哥林多後書', en: '2 Corinthians', abbr: '2Co', chapters: 13, id: '2CO' },
+            { name: '哥林多前書', en: '1 Chronicles', abbr: '1Co', chapters: 16, id: '1CO' }, { name: '哥林多後書', en: '2 Chronicles', abbr: '2Co', chapters: 13, id: '2CO' },
             { name: '加拉太書', en: 'Galatians', abbr: 'Gal', chapters: 6, id: 'GAL' }, { name: '以弗所書', en: 'Ephesians', abbr: 'Eph', chapters: 6, id: 'EPH' },
             { name: '腓立比書', en: 'Philippians', abbr: 'Php', chapters: 4, id: 'PHL' }, { name: '歌羅西書', en: 'Colossians', abbr: 'Col', chapters: 4, id: 'COL' },
             { name: '帖撒羅尼迦前書', en: '1 Thessalonians', abbr: '1Th', chapters: 5, id: '1TH' }, { name: '帖撒羅尼迦後書', en: '2 Thessalonians', abbr: '2Th', chapters: 3, id: '2TH' },
@@ -348,6 +331,9 @@
           const [bibleSearchQuery, setBibleSearchQuery] = useState('');
           const [bibleSearchResults, setBibleSearchResults] = useState([]);
 
+          // 🔥 核心操控指標：綁定主要經文檢視區
+          const mainRef = useRef(null);
+
           useEffect(() => {
             setSavedState('bible_dark', isDarkMode);
             if (isDarkMode) document.documentElement.classList.add('dark');
@@ -377,7 +363,7 @@
             setTimeout(() => setToastMsg(''), 2000);
           };
 
-          // 🔥 全新智能跨卷「下一章」導航引擎
+          // 智能跨卷「下一章」導航引擎
           const handleNextChapter = () => {
               const ALL_BOOKS = [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT];
               const currentIndex = ALL_BOOKS.findIndex(b => b.id === viewState.bookId);
@@ -385,47 +371,38 @@
               
               const currentBook = ALL_BOOKS[currentIndex];
               if (viewState.chapter < currentBook.chapters) {
-                  // 還沒到當前書卷最後一章，直接跳下一章
                   setViewState(v => ({ ...v, chapter: v.chapter + 1 }));
               } else if (currentIndex + 1 < ALL_BOOKS.length) {
-                  // 到達當前書卷最後一章，自動切換至下一卷書的第一章
                   const nextBook = ALL_BOOKS[currentIndex + 1];
-                  setViewState({
-                      book: nextBook.name,
-                      bookId: nextBook.id,
-                      chapter: 1
-                  });
+                  setViewState({ book: nextBook.name, bookId: nextBook.id, chapter: 1 });
                   setToastMsg(`進入下一卷書：${nextBook.name}`);
                   setTimeout(() => setToastMsg(''), 2000);
               } else {
                   setToastMsg('已是聖經最後一章（啟示錄）');
                   setTimeout(() => setToastMsg(''), 2000);
               }
+              // 跳章時自動將視窗滾回最頂端
+              if (mainRef.current) mainRef.current.scrollTop = 0;
           };
 
-          // 🔥 全新智能跨卷「上一章」導航引擎
+          // 智能跨卷「上一章」導航引擎
           const handlePrevChapter = () => {
               const ALL_BOOKS = [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT];
               const currentIndex = ALL_BOOKS.findIndex(b => b.id === viewState.bookId);
               if (currentIndex === -1) return;
 
               if (viewState.chapter > 1) {
-                  // 還沒到當前書卷第一章，直接退回上一章
                   setViewState(v => ({ ...v, chapter: v.chapter - 1 }));
               } else if (currentIndex - 1 >= 0) {
-                  // 到達當前書卷第一章，自動切換至上一卷書的最後一章
                   const prevBook = ALL_BOOKS[currentIndex - 1];
-                  setViewState({
-                      book: prevBook.name,
-                      bookId: prevBook.id,
-                      chapter: prevBook.chapters
-                  });
+                  setViewState({ book: prevBook.name, bookId: prevBook.id, chapter: prevBook.chapters });
                   setToastMsg(`返回上一卷書：${prevBook.name}`);
                   setTimeout(() => setToastMsg(''), 2000);
               } else {
                   setToastMsg('已是聖經第一章（創世記）');
                   setTimeout(() => setToastMsg(''), 2000);
               }
+              if (mainRef.current) mainRef.current.scrollTop = 0;
           };
 
           const loadChapter = useCallback(async () => {
@@ -446,7 +423,7 @@
                 let cuv = loadedBibles['zh-cuv']?.[viewState.bookId]?.[viewState.chapter]?.[i];
                 let wlc = loadedBibles['orig-wlc']?.[viewState.bookId]?.[viewState.chapter]?.[i];
                 if (isDemo && viewState.bookId === 'GEN' && viewState.chapter === 1) {
-                    if (i === 1) { cuv = "起初，神創造天地。"; wlc = "בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַשָּׁמัיִם וְאֵת הָאָרֶץ"; }
+                    if (i === 1) { cuv = "起初，神創造天地。"; wlc = "בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַשָּׁמַיִם וְאֵת הָאָרֶץ"; }
                     if (i === 2) cuv = "地是空虛混沌，淵面黑暗；神的靈運行在水面上。";
                 }
                 newVerses.push({
@@ -710,8 +687,8 @@
                 </div>
               </header>
 
-              {/* 主內容區：內嵌 custom-scrollbar */}
-              <main className="flex-1 overflow-y-auto max-w-lg mx-auto w-full relative custom-scrollbar">
+              {/* 🔥 主內容區：套用 ref 控制，並全面改回 no-scrollbar 隱藏線條 */}
+              <main ref={mainRef} className="flex-1 overflow-y-auto max-w-lg mx-auto w-full relative no-scrollbar">
                  {activeTab === 'home' && (
                     <div className="px-6 py-10 flex flex-col h-full animate-in fade-in">
                        <div className="flex flex-col items-center justify-center py-10 gap-4 mb-8 border-b border-slate-200 dark:border-slate-800 pb-12">
@@ -987,7 +964,27 @@
                     </div>
                  )}
 
-                 {/* 浮動導航列：套用全新跨卷 handlePrevChapter 同 handleNextChapter 邏輯 */}
+                 {/* 🔥 全新內嵌：專利級右側「上鍵」與「下鍵」翻頁懸浮控制中心 (只在需要大量滾動的頁面現身) */}
+                 {(activeTab === 'read' || activeTab === 'compare' || activeTab === 'search') && (
+                    <div className="fixed right-4 bottom-[180px] z-[60] flex flex-col gap-3">
+                        {/* 向上鍵：平滑上滾 40% 的畫面高度 */}
+                        <button 
+                            onClick={() => mainRef.current?.scrollBy({ top: -window.innerHeight * 0.4, behavior: 'smooth' })}
+                            className="w-12 h-12 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-full shadow-lg flex items-center justify-center text-slate-700 dark:text-slate-300 active:scale-90 transition-transform"
+                        >
+                            <ChevronDown className="w-6 h-6 rotate-180" />
+                        </button>
+                        {/* 向下鍵：平滑下滾 40% 的畫面高度 */}
+                        <button 
+                            onClick={() => mainRef.current?.scrollBy({ top: window.innerHeight * 0.4, behavior: 'smooth' })}
+                            className="w-12 h-12 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-full shadow-lg flex items-center justify-center text-slate-700 dark:text-slate-300 active:scale-90 transition-transform"
+                        >
+                            <ChevronDown className="w-6 h-6" />
+                        </button>
+                    </div>
+                 )}
+
+                 {/* 浮動導航列 */}
                  {(activeTab === 'read' || activeTab === 'compare') && !fetching && (
                     <div className="fixed bottom-[105px] left-0 right-0 px-4 max-w-lg mx-auto z-40">
                        <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 p-1.5 rounded-2xl shadow-lg flex gap-1.5">
