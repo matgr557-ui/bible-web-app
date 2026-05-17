@@ -13,6 +13,14 @@
     </script>
 
     <style>
+        /* 🔥 核心修復：徹底禁用 Android WebView 系統內建的下拉重新整理 (Pull-to-refresh) 手勢 */
+        html, body, #root {
+            overscroll-behavior-y: none;
+            overscroll-behavior: none;
+            height: 100%;
+            width: 100%;
+        }
+
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideInFromTop { from { transform: translate(-50%, -100%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
         @keyframes slideInFromBottom { from { transform: translateY(100%); } to { transform: translateY(0); } }
@@ -136,7 +144,7 @@
             { name: '提摩太前書', en: '1 Timothy', abbr: '1Ti', chapters: 6, id: '1TI' }, { name: '提摩太後書', en: '2 Timothy', abbr: '2Ti', chapters: 4, id: '2TI' },
             { name: '提多書', en: 'Titus', abbr: 'Tit', chapters: 3, id: 'TIT' }, { name: '腓利門書', en: 'Philemon', abbr: 'Phm', chapters: 1, id: 'PHM' },
             { name: '希伯來書', en: 'Hebrews', abbr: 'Heb', chapters: 13, id: 'HEB' }, { name: '雅各書', en: 'James', abbr: 'Jas', chapters: 5, id: 'JAS' },
-            { name: '彼得前書', d: '1 Peter', abbr: '1Pe', chapters: 5, id: '1PE' }, { name: '彼得後書', en: '2 Peter', abbr: '2Pe', chapters: 3, id: '2PE' },
+            { name: '彼得前書', en: '1 Peter', abbr: '1Pe', chapters: 5, id: '1PE' }, { name: '彼得後書', en: '2 Peter', abbr: '2Pe', chapters: 3, id: '2PE' },
             { name: '約翰一書', en: '1 John', abbr: '1Jn', chapters: 5, id: '1JO' }, { name: '約翰二書', en: '2 John', abbr: '2Jn', chapters: 1, id: '2JO' },
             { name: '約翰三書', en: '3 John', abbr: '3Jn', chapters: 1, id: '3JO' }, { name: '猶大書', en: 'Jude', abbr: 'Jud', chapters: 1, id: 'JUD' },
             { name: '啟示錄', en: 'Revelation', abbr: 'Rev', chapters: 22, id: 'REV' }
@@ -368,7 +376,7 @@
                 let cuv = loadedBibles['zh-cuv']?.[viewState.bookId]?.[viewState.chapter]?.[i];
                 let wlc = loadedBibles['orig-wlc']?.[viewState.bookId]?.[viewState.chapter]?.[i];
                 if (isDemo && viewState.bookId === 'GEN' && viewState.chapter === 1) {
-                    if (i === 1) { cuv = "起初，神創造天地。"; wlc = "בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַشָּׁמַיִם וְאֵת הָאָרֶץ"; }
+                    if (i === 1) { cuv = "起初，神創造天地。"; wlc = "בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַשָּׁמַיִם וְאֵת הָאָרֶץ"; }
                     if (i === 2) cuv = "地是空虛混沌，淵面黑暗；神的靈運行在水面上。";
                 }
                 newVerses.push({
@@ -563,7 +571,7 @@
                                           <p className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed"><span className="text-slate-400 font-normal mr-1">定義:</span> {r.strongs_definition}</p>
                                        </div>
                                    ))}
-                                </div>
+                               </div>
                             )}
                          </div>
                       </div>
@@ -714,7 +722,6 @@
                              </div>
                              <div className="p-4 sm:p-5">
                                 {layoutMode === 'vertical' ? (
-                                   /* 1. 上中下直排模式 */
                                    <div className="space-y-4">
                                       {verticalSlots.map((slot, sIdx) => (
                                          <div key={sIdx} className={sIdx > 0 ? "pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-2" : "flex flex-col sm:flex-row gap-2"}>
@@ -734,20 +741,16 @@
                                       ))}
                                    </div>
                                 ) : (
-                                   /* 2. 🔥 完美修復版：手機強制左中右完美分欄模式 */
                                    <div className="grid grid-cols-3 gap-2 min-w-0 w-full overflow-hidden">
-                                      {/* 左欄：中文 */}
                                       <div className="border-r border-slate-100 dark:border-slate-800 pr-1.5 flex flex-col min-w-0">
                                          <div className="mb-2 shrink-0">
                                             <select value={horizVersions.zh} onChange={e => setHorizVersions({...horizVersions, zh: e.target.value})} className="text-[9px] font-black text-slate-500 bg-slate-100 dark:bg-slate-800 rounded py-0.5 px-1 outline-none cursor-pointer max-w-full truncate">
                                                <option value="cuv">和合本</option><option value="lzz">呂振中</option><option value="ncv">新譯本</option>
                                             </select>
                                          </div>
-                                         {/* 橫向模式自動自適應降噪縮小 3px，防止字體過大擠壓 */}
                                          <p style={{ fontSize: `${Math.max(11, fontSize - 3)}px` }} className="font-bold text-slate-800 dark:text-slate-200 leading-relaxed break-all">{verse.chinese[horizVersions.zh] || "尚未匯入"}</p>
                                       </div>
                                       
-                                      {/* 中欄：英文 */}
                                       <div className="border-r border-slate-100 dark:border-slate-800 pr-1.5 flex flex-col min-w-0">
                                          <div className="mb-2 shrink-0">
                                             <select value={horizVersions.en} onChange={e => setHorizVersions({...horizVersions, en: e.target.value})} className="text-[9px] font-black text-slate-500 bg-slate-100 dark:bg-slate-800 rounded py-0.5 px-1 outline-none cursor-pointer max-w-full truncate">
@@ -757,7 +760,6 @@
                                          <p style={{ fontSize: `${Math.max(11, fontSize - 3)}px` }} className="italic font-serif text-slate-600 dark:text-slate-400 leading-relaxed break-all">{verse.english[horizVersions.en] || "尚未匯入"}</p>
                                       </div>
                                       
-                                      {/* 右欄：原文 */}
                                       <div className="flex flex-col min-w-0">
                                          <div className="mb-2 shrink-0">
                                             <select value={horizVersions.orig} onChange={e => setHorizVersions({...horizVersions, orig: e.target.value})} className="text-[9px] font-black text-amber-600 bg-amber-50 dark:bg-amber-900/20 rounded py-0.5 px-1 outline-none cursor-pointer max-w-full truncate">
