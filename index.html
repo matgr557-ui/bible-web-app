@@ -46,7 +46,6 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        // 🔥 新增引入 useRef 控制元
         const { useState, useEffect, useCallback, Fragment, useRef } = React;
         
         // --- 📴 100% 離線純原生內嵌 SVG 圖標引擎 ---
@@ -138,7 +137,7 @@
             { name: '馬太福音', en: 'Matthew', abbr: 'Mat', chapters: 28, id: 'MAT' }, { name: '馬可福音', en: 'Mark', abbr: 'Mrk', chapters: 16, id: 'MRK' },
             { name: '路加福音', en: 'Luke', abbr: 'Luk', chapters: 24, id: 'LUK' }, { name: '約翰福音', en: 'John', abbr: 'Jhn', chapters: 21, id: 'JHN' },
             { name: '使徒行傳', en: 'Acts', abbr: 'Act', chapters: 28, id: 'ACT' }, { name: '羅馬書', en: 'Romans', abbr: 'Rom', chapters: 16, id: 'ROM' },
-            { name: '哥林多前書', en: '1 Chronicles', abbr: '1Co', chapters: 16, id: '1CO' }, { name: '哥林多後書', en: '2 Chronicles', abbr: '2Co', chapters: 13, id: '2CO' },
+            { name: '哥林多前書', en: '1 Corinthians', abbr: '1Co', chapters: 16, id: '1CO' }, { name: '哥林多後書', en: '2 Corinthians', abbr: '2Co', chapters: 13, id: '2CO' },
             { name: '加拉太書', en: 'Galatians', abbr: 'Gal', chapters: 6, id: 'GAL' }, { name: '以弗所書', en: 'Ephesians', abbr: 'Eph', chapters: 6, id: 'EPH' },
             { name: '腓立比書', en: 'Philippians', abbr: 'Php', chapters: 4, id: 'PHL' }, { name: '歌羅西書', en: 'Colossians', abbr: 'Col', chapters: 4, id: 'COL' },
             { name: '帖撒羅尼迦前書', en: '1 Thessalonians', abbr: '1Th', chapters: 5, id: '1TH' }, { name: '帖撒羅尼迦後書', en: '2 Thessalonians', abbr: '2Th', chapters: 3, id: '2TH' },
@@ -230,7 +229,10 @@
                 bookMap[b.name] = b.id; bookMap[b.en] = b.id; bookMap[b.abbr] = b.id;
                 bookMap[b.en.toUpperCase()] = b.id; bookMap[b.abbr.toUpperCase()] = b.id;
             });
+            
+            // 🔥 核心修復：喺 ALIASES 裡加入 'EXOD': 'EXO' 同 'DEUT': 'DEU' 兼容四字書卷標籤
             const ALIASES = {
+              'EXOD': 'EXO', 'DEUT': 'DEU', 'JOSH': 'JSH', 'JUDG': 'JDG',
               '1CHR': '1CH', '2CHR': '2CH', '1SAM': '1SA', '2SAM': '2SA', '1KGS': '1KI', '2KGS': '2KI', 
               'PSALM': 'PSA', 'SONG': 'SNG', 'CANTICLES': 'SNG', 'EZEK': 'EZK', 'MATT': 'MAT', 'MARK': 'MRK',
               'LUKE': 'LUK', 'JOHN': 'JHN', '1COR': '1CO', '2COR': '2CO', '1THESS': '1TH', '2THESS': '2TH', 
@@ -331,7 +333,6 @@
           const [bibleSearchQuery, setBibleSearchQuery] = useState('');
           const [bibleSearchResults, setBibleSearchResults] = useState([]);
 
-          // 🔥 核心操控指標：綁定主要經文檢視區
           const mainRef = useRef(null);
 
           useEffect(() => {
@@ -363,7 +364,6 @@
             setTimeout(() => setToastMsg(''), 2000);
           };
 
-          // 智能跨卷「下一章」導航引擎
           const handleNextChapter = () => {
               const ALL_BOOKS = [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT];
               const currentIndex = ALL_BOOKS.findIndex(b => b.id === viewState.bookId);
@@ -381,11 +381,9 @@
                   setToastMsg('已是聖經最後一章（啟示錄）');
                   setTimeout(() => setToastMsg(''), 2000);
               }
-              // 跳章時自動將視窗滾回最頂端
               if (mainRef.current) mainRef.current.scrollTop = 0;
           };
 
-          // 智能跨卷「上一章」導航引擎
           const handlePrevChapter = () => {
               const ALL_BOOKS = [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT];
               const currentIndex = ALL_BOOKS.findIndex(b => b.id === viewState.bookId);
@@ -687,7 +685,7 @@
                 </div>
               </header>
 
-              {/* 🔥 主內容區：套用 ref 控制，並全面改回 no-scrollbar 隱藏線條 */}
+              {/* 主內容區：套用 ref 控制，並全面改回 no-scrollbar 隱藏線條 */}
               <main ref={mainRef} className="flex-1 overflow-y-auto max-w-lg mx-auto w-full relative no-scrollbar">
                  {activeTab === 'home' && (
                     <div className="px-6 py-10 flex flex-col h-full animate-in fade-in">
@@ -964,17 +962,15 @@
                     </div>
                  )}
 
-                 {/* 🔥 全新內嵌：專利級右側「上鍵」與「下鍵」翻頁懸浮控制中心 (只在需要大量滾動的頁面現身) */}
+                 {/* 右側「上鍵」與「下鍵」翻頁懸浮控制中心 */}
                  {(activeTab === 'read' || activeTab === 'compare' || activeTab === 'search') && (
                     <div className="fixed right-4 bottom-[180px] z-[60] flex flex-col gap-3">
-                        {/* 向上鍵：平滑上滾 40% 的畫面高度 */}
                         <button 
                             onClick={() => mainRef.current?.scrollBy({ top: -window.innerHeight * 0.4, behavior: 'smooth' })}
                             className="w-12 h-12 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-full shadow-lg flex items-center justify-center text-slate-700 dark:text-slate-300 active:scale-90 transition-transform"
                         >
                             <ChevronDown className="w-6 h-6 rotate-180" />
                         </button>
-                        {/* 向下鍵：平滑下滾 40% 的畫面高度 */}
                         <button 
                             onClick={() => mainRef.current?.scrollBy({ top: window.innerHeight * 0.4, behavior: 'smooth' })}
                             className="w-12 h-12 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-full shadow-lg flex items-center justify-center text-slate-700 dark:text-slate-300 active:scale-90 transition-transform"
