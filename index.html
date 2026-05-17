@@ -192,6 +192,17 @@
           });
         };
 
+        // 🔥 新增：從資料庫精準刪除單一指定項目的核心 API
+        const deleteFromDB = async (id) => {
+          const db = await initDB();
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            tx.objectStore(STORE_NAME).delete(id);
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+          });
+        };
+
         const loadFromDB = async () => {
           const db = await initDB();
           return new Promise((resolve, reject) => {
@@ -230,7 +241,7 @@
                 bookMap[b.en.toUpperCase()] = b.id; bookMap[b.abbr.toUpperCase()] = b.id;
             });
             
-            // 🔥 核心修復：喺 ALIASES 裡加入 'EXOD': 'EXO' 同 'DEUT': 'DEU' 兼容四字書卷標籤
+            // 已完美支援 Exod 等四字特殊標籤
             const ALIASES = {
               'EXOD': 'EXO', 'DEUT': 'DEU', 'JOSH': 'JSH', 'JUDG': 'JDG',
               '1CHR': '1CH', '2CHR': '2CH', '1SAM': '1SA', '2SAM': '2SA', '1KGS': '1KI', '2KGS': '2KI', 
@@ -401,6 +412,24 @@
                   setTimeout(() => setToastMsg(''), 2000);
               }
               if (mainRef.current) mainRef.current.scrollTop = 0;
+          };
+
+          // 🔥 新增：處理單一譯本刪除的點擊事件
+          const handleDeleteVersion = async (id, label) => {
+              if (window.confirm(`確定要單獨刪除「${label}」的全部數據嗎？`)) {
+                  try {
+                      await deleteFromDB(id);
+                      setLoadedBibles(prev => {
+                          const next = { ...prev };
+                          delete next[id]; // 從記憶體狀態中剔除
+                          return next;
+                      });
+                      setToastMsg(`🗑️ 已成功刪除：${label}`);
+                  } catch (err) {
+                      setToastMsg(`❌ 刪除失敗：${err.message}`);
+                  }
+                  setTimeout(() => setToastMsg(''), 2500);
+              }
           };
 
           const loadChapter = useCallback(async () => {
@@ -906,7 +935,7 @@
                              </div>
                           </div>
 
-                          {/* 資料庫匯入 */}
+                          {/* 本地資料庫管理 */}
                           <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
                              <div className="flex items-center gap-3 mb-6">
                                 <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center"><Database className="w-5 h-5 text-indigo-600"/></div>
@@ -915,6 +944,8 @@
                                    <p className="text-xs text-slate-500 mt-0.5">管理手機內部離線聖經儲存</p>
                                 </div>
                              </div>
+                             
+                             {/* 🔥 核心升級：本地資料庫列表支援「單項獨立刪除」 */}
                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6">
                                 {[
                                   { id: 'zh-cuv', label: '和合本 (CUV)' }, { id: 'zh-lzz', label: '呂振中 (LZZ)' }, { id: 'zh-ncv', label: '新譯本 (NCV)' },
@@ -924,9 +955,24 @@
                                   { id: 'dict-lxx-strongs', label: 'LXX Strongs 字典 (七十士)' },
                                   { id: 'dict-na28-strongs', label: 'NA28 Strongs 字典 (新約希臘)' }
                                 ].map(ver => (
-                                   <div key={ver.id} className="flex justify-between items-center text-xs p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                                   <div key={ver.id} className="flex justify-between items-center text-xs p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 transition-colors">
                                       <span className="font-bold text-slate-700 dark:text-slate-300 text-[11px]">{ver.label}</span>
-                                      {loadedBibles[ver.id] ? <span className="text-emerald-500 font-black flex items-center gap-1 shrink-0"><Check className="w-3 h-3"/> 已載入</span> : <span className="text-slate-400 shrink-0">尚未匯入</span> }
+                                      
+                                      {loadedBibles[ver.id] ? (
+                                          <div className="flex items-center gap-2 shrink-0">
+                                              <span className="text-emerald-500 font-black flex items-center gap-0.5"><Check className="w-3 h-3"/> 已載入</span>
+                                              {/* 獨立刪除按鈕 */}
+                                              <button 
+                                                  onClick={() => handleDeleteVersion(ver.id, ver.label)}
+                                                  className="w-5 h-5 flex items-center justify-center rounded-md bg-red-50 dark:bg-red-950/40 text-red-500 hover:bg-red-500 hover:text-white active:scale-90 transition-all shadow-sm"
+                                                  title="單獨刪除此項目"
+                                              >
+                                                  <X className="w-3 h-3" />
+                                              </button>
+                                          </div>
+                                      ) : (
+                                          <span className="text-slate-400 shrink-0">尚未匯入</span>
+                                      )}
                                    </div>
                                 ))}
                              </div>
@@ -954,7 +1000,7 @@
                                    </div>
                                 </div>
                              </div>
-                             <button onClick={async () => { if(window.confirm('確定要清空所有手機資料嗎？')) { await clearDB(); setLoadedBibles({}); setToastMsg('資料庫已清空'); } }} className="mt-6 w-full py-3 text-xs font-bold text-red-500 hover:text-red-600 bg-red-50 dark:bg-red-900/20 rounded-xl">
+                             <button onClick={async () => { if(window.confirm('警告：這將會清除您手機中的「所有」聖經與字典數據！確定要繼續嗎？')) { await clearDB(); setLoadedBibles({}); setToastMsg('整個資料庫已重置清空'); } }} className="mt-6 w-full py-3 text-xs font-bold text-red-500 hover:text-red-600 bg-red-50 dark:bg-red-900/20 rounded-xl transition-colors">
                                 清除所有已匯入資料 (重置資料庫)
                              </button>
                           </div>
