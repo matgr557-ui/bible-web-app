@@ -70,7 +70,7 @@
             'moon': <Fragment><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></Fragment>,
             'database': <Fragment><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></Fragment>,
             'book-open': <Fragment><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></Fragment>,
-            'settings': <Fragment><path d="M12.22 2h-.44a2 2 0 0 0-2 2l-.2.1a2 2 0 0 1-2.81.25l-.17-.1a2 2 0 0 0-2.81.14l-.31.31a2 2 0 0 0 .14 2.81l.1.17a2 2 0 0 1-.25 2.81l-.1.2a2 2 0 0 0-2 2v.44a2 2 0 0 0 2 2l.1.2a2 2 0 0 1 .25 2.81l-.1.17a2 2 0 0 0-.14 2.81l.31.31a2 2 0 0 0 2.81-.14l.17-.1a2 2 0 0 1 2.81-.25l.2-.1a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></Fragment>
+            'settings': <Fragment><path d="M12.22 2h-.44a2 2 0 0 0-2 2l-.2.1a2 2 0 0 1-2.81.25l-.17-.1a2 2 0 0 0-2.81.14l-.31.31a2 2 0 0 0 .14 2.81l.1.17a2 2 0 0 1-.25 2.81l-.1.2a2 2 0 0 0-2 2v.44a2 2 0 0 0 2 2l.1.2a2 2 0 0 1 .25 2.81l-.1.17a2 2 0 0 0-.14 2.81l.31.31a2 2 0 0 0 2.81-.14l.17-.1a2 2 0 0 1 2.81-.25l.2.1a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2l.2-.1a2 2 0 0 1 2.81-.25l.17.1a2 2 0 0 0 2.81-.14l.31-.31a2 2 0 0 0-.14-2.81l-.1-.17a2 2 0 0 1 .25-2.81l.1-.2a2 2 0 0 0 2 2v-.44a2 2 0 0 0-2-2l-.1-.2a2 2 0 0 1-.25-2.81l.1-.17a2 2 0 0 0 .14-2.81l-.31-.31a2 2 0 0 0-2.81.14l-.17.1a2 2 0 0 1-2.81.25l-.2-.1a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></Fragment>
         };
 
         const LucideIcon = ({ name, className = '', size = 20, strokeWidth = 2, ...props }) => {
@@ -124,7 +124,7 @@
             { name: '詩篇', en: 'Psalms', abbr: 'Psa', chapters: 150, id: 'PSA' }, { name: '箴言', en: 'Proverbs', abbr: 'Pro', chapters: 31, id: 'PRO' },
             { name: '傳道書', en: 'Ecclesiastes', abbr: 'Ecc', chapters: 12, id: 'ECC' }, { name: '雅歌', en: 'Song of Solomon', abbr: 'Sng', chapters: 8, id: 'SNG' },
             { name: '以賽亞書', en: 'Isaiah', abbr: 'Isa', chapters: 66, id: 'ISA' }, { name: '耶利米書', en: 'Jeremiah', abbr: 'Jer', chapters: 52, id: 'JER' },
-            { name: '耶利米哀歌', en: 'Lamentations', abbr: 'Lam', chapters: 5, id: 'LAM' }, { name: '以西結書', en: 'Ezekiel', abbr: 'EZK', chapters: 48, id: 'EZK' },
+            { name: '耶利米哀歌', en: 'Lamentations', abbr: 'Lam', chapters: 5, id: 'LAM' }, { name: '以西結書', en: 'Ezekiel', abbr: 'Ezk', chapters: 48, id: 'EZK' },
             { name: '但以理書', en: 'Daniel', abbr: 'Dan', chapters: 12, id: 'DAN' }, { name: '何西阿書', en: 'Hosea', abbr: 'Hos', chapters: 14, id: 'HOS' },
             { name: '約珥書', en: 'Joel', abbr: 'Joe', chapters: 3, id: 'JOL' }, { name: '阿摩司書', en: 'Amos', abbr: 'Amo', chapters: 9, id: 'AMO' },
             { name: '俄巴底亞書', en: 'Obadiah', abbr: 'Oba', chapters: 1, id: 'OBA' }, { name: '約拿書', en: 'Jonah', abbr: 'Jon', chapters: 4, id: 'JON' },
@@ -192,6 +192,7 @@
           });
         };
 
+        // 🔥 新增：從資料庫精準刪除單一指定項目的核心 API
         const deleteFromDB = async (id) => {
           const db = await initDB();
           return new Promise((resolve, reject) => {
@@ -240,6 +241,7 @@
                 bookMap[b.en.toUpperCase()] = b.id; bookMap[b.abbr.toUpperCase()] = b.id;
             });
             
+            // 已完美支援 Exod 等四字特殊標籤
             const ALIASES = {
               'EXOD': 'EXO', 'DEUT': 'DEU', 'JOSH': 'JSH', 'JUDG': 'JDG',
               '1CHR': '1CH', '2CHR': '2CH', '1SAM': '1SA', '2SAM': '2SA', '1KGS': '1KI', '2KGS': '2KI', 
@@ -344,112 +346,6 @@
 
           const mainRef = useRef(null);
 
-          // 🪐 「懸浮觸控滑動艙 (Scrollbar Capsule)」核心進階狀態與指針變數
-          const [floatPos, setFloatPos] = useState({ x: -100, y: -100 });
-          const [isDraggingCapsule, setIsDraggingCapsule] = useState(false);
-          const [isDraggingThumb, setIsDraggingThumb] = useState(false);
-          const [scrollRatio, setScrollRatio] = useState(0); // 0 至 1 滾動比例
-
-          const capsuleDragStart = useRef({ x: 0, y: 0 });
-          const currentCapsulePos = useRef({ x: 0, y: 0 });
-          const thumbDragStart = useRef({ y: 0, scrollTop: 0 });
-
-          const TRACK_HEIGHT = 140; // 滑動軌道總長度 (px)
-          const THUMB_HEIGHT = 36;  // 滑塊長度 (px)
-          const MAX_TRAVEL = TRACK_HEIGHT - THUMB_HEIGHT; // 84px 可跑行程
-
-          // 監聽經文 Main 視窗實際滾動事件，實時回傳更新滑塊比例
-          useEffect(() => {
-              const mainEl = mainRef.current;
-              if (!mainEl) return;
-
-              const syncCapsuleThumb = () => {
-                  const { scrollTop, scrollHeight, clientHeight } = mainEl;
-                  const maxScroll = scrollHeight - clientHeight;
-                  if (maxScroll > 0) {
-                      setScrollRatio(scrollTop / maxScroll);
-                  } else {
-                      setScrollRatio(0);
-                  }
-              };
-
-              mainEl.addEventListener('scroll', syncCapsuleThumb);
-              // 切換分頁或經文載入完畢時即時跑一次初始化
-              setTimeout(syncCapsuleThumb, 100);
-
-              return () => mainEl.removeEventListener('scroll', syncCapsuleThumb);
-          }, [activeTab, verses, bibleSearchResults]);
-
-          // 自動定位浮動艙初始位置 (靠右)
-          useEffect(() => {
-              const initPosition = () => {
-                  if (!isDraggingCapsule && !isDraggingThumb) {
-                      const x = window.innerWidth - 60; // 靠右邊緣 12px
-                      const y = window.innerHeight - 340; // 避開底部與切換欄
-                      setFloatPos({ x, y });
-                      currentCapsulePos.current = { x, y };
-                  }
-              };
-              if (appReady) initPosition();
-              window.addEventListener('resize', initPosition);
-              return () => window.removeEventListener('resize', initPosition);
-          }, [appReady]);
-
-          // 1. 控制艙整體「移動外殼位置」觸控拖拉函數
-          const handleCapsuleDown = (e) => {
-              setIsDraggingCapsule(true);
-              capsuleDragStart.current = {
-                  x: e.clientX - currentCapsulePos.current.x,
-                  y: e.clientY - currentCapsulePos.current.y
-              };
-              e.currentTarget.setPointerCapture(e.pointerId);
-          };
-
-          const handleCapsuleMove = (e) => {
-              if (!isDraggingCapsule) return;
-              let newX = e.clientX - capsuleDragStart.current.x;
-              let newY = e.clientY - capsuleDragStart.current.y;
-
-              // 安全視窗邊界限制裁切
-              newX = Math.max(8, Math.min(window.innerWidth - 48 - 8, newX));
-              newY = Math.max(8, Math.min(window.innerHeight - 200 - 100, newY));
-
-              setFloatPos({ x: newX, y: newY });
-              currentCapsulePos.current = { x: newX, y: newY };
-          };
-
-          const handleCapsuleUp = () => {
-              setIsDraggingCapsule(false);
-          };
-
-          // 2. 控制艙核心「滑塊 (Thumb) 操控滾動經文」觸控拖拉函數
-          const handleThumbDown = (e) => {
-              e.stopPropagation(); // 阻止事件外流，避免觸發外殼移動
-              setIsDraggingThumb(true);
-              thumbDragStart.current = {
-                  y: e.clientY,
-                  scrollTop: mainRef.current ? mainRef.current.scrollTop : 0
-              };
-              e.currentTarget.setPointerCapture(e.pointerId);
-          };
-
-          const handleThumbMove = (e) => {
-              if (!isDraggingThumb || !mainRef.current) return;
-              const deltaY = e.clientY - thumbDragStart.current.y;
-              
-              const { scrollHeight, clientHeight } = mainRef.current;
-              const maxScroll = scrollHeight - clientHeight;
-              if (maxScroll <= 0) return;
-
-              // 比例公式轉換：畫面上拖動的像素距離換算成內容捲動的實際高度
-              const deltaScroll = (deltaY / MAX_TRAVEL) * maxScroll;
-              mainRef.current.scrollTop = thumbDragStart.current.scrollTop + deltaScroll;
-          };
-
-          const handleThumbUp = () => {
-              setIsDraggingThumb(false);
-          };
-
           useEffect(() => {
             setSavedState('bible_dark', isDarkMode);
             if (isDarkMode) document.documentElement.classList.add('dark');
@@ -518,13 +414,14 @@
               if (mainRef.current) mainRef.current.scrollTop = 0;
           };
 
+          // 🔥 新增：處理單一譯本刪除的點擊事件
           const handleDeleteVersion = async (id, label) => {
               if (window.confirm(`確定要單獨刪除「${label}」的全部數據嗎？`)) {
                   try {
                       await deleteFromDB(id);
                       setLoadedBibles(prev => {
                           const next = { ...prev };
-                          delete next[id]; 
+                          delete next[id]; // 從記憶體狀態中剔除
                           return next;
                       });
                       setToastMsg(`🗑️ 已成功刪除：${label}`);
@@ -553,7 +450,7 @@
                 let cuv = loadedBibles['zh-cuv']?.[viewState.bookId]?.[viewState.chapter]?.[i];
                 let wlc = loadedBibles['orig-wlc']?.[viewState.bookId]?.[viewState.chapter]?.[i];
                 if (isDemo && viewState.bookId === 'GEN' && viewState.chapter === 1) {
-                    if (i === 1) { cuv = "起初，神創造天地。"; wlc = "בְּרֵאשִׁית בָּ反א אֱלֹהִים אֵת הַשָּׁמַיִם וְאֵת הָאָרֶץ"; }
+                    if (i === 1) { cuv = "起初，神創造天地。"; wlc = "בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַשָּׁמַיִם וְאֵת הָאָרֶץ"; }
                     if (i === 2) cuv = "地是空虛混沌，淵面黑暗；神的靈運行在水面上。";
                 }
                 newVerses.push({
@@ -725,7 +622,7 @@
                          <h3 className="font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
                             <BookOpen className="w-5 h-5 text-indigo-500" /> Strong's 字典搜尋
                          </h3>
-                         <select value={dictTarget} onChange={e => { setDictTarget(e.target.value); setDictResults(executeDictSearch(dictQuery, e.target.value)); }} className="text-[11px] font-black bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 outline-none text-indigo-600 dark:text-indigo-400 pointer-events-auto cursor-pointer">
+                         <select value={dictTarget} onChange={e => { setDictTarget(e.target.value); setDictResults(executeDictSearch(dictQuery, e.target.value)); }} className="text-[11px] font-black bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 outline-none text-indigo-600 dark:text-indigo-400 cursor-pointer">
                             <option value="dict-wlc-strongs">WLC 希伯來</option>
                             <option value="dict-lxx-strongs">LXX 七十士</option>
                             <option value="dict-na28-strongs">NA28 新約希臘</option>
@@ -817,7 +714,7 @@
                 </div>
               </header>
 
-              {/* 主內容區 */}
+              {/* 主內容區：套用 ref 控制，並全面改回 no-scrollbar 隱藏線條 */}
               <main ref={mainRef} className="flex-1 overflow-y-auto max-w-lg mx-auto w-full relative no-scrollbar">
                  {activeTab === 'home' && (
                     <div className="px-6 py-10 flex flex-col h-full animate-in fade-in">
@@ -984,15 +881,15 @@
 
                         <div className="flex-1 overflow-y-auto no-scrollbar space-y-3">
                             {!loadedBibles[readVersion] ? (
-                                <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs font-bold text-center py-20">
+                                <div className="py-20 text-center text-xs font-bold text-slate-400">
                                     當前選擇的譯本 [{readVersion.toUpperCase()}] 尚未有經文，<br/>請先到設定頁面匯入 JSON 檔。
                                 </div>
                             ) : bibleSearchQuery.trim() === "" ? (
-                                <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs font-bold text-center py-20">
+                                <div className="py-20 text-center text-xs font-bold text-slate-400">
                                     請輸入文字關鍵字開始全面檢索聖經。
                                 </div>
                             ) : bibleSearchResults.length === 0 ? (
-                                <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs font-bold text-center py-20">
+                                <div className="py-20 text-center text-xs font-bold text-slate-400">
                                     找不到包含「{bibleSearchQuery}」的經文節數。
                                 </div>
                             ) : (
@@ -1048,6 +945,7 @@
                                 </div>
                              </div>
                              
+                             {/* 🔥 核心升級：本地資料庫列表支援「單項獨立刪除」 */}
                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6">
                                 {[
                                   { id: 'zh-cuv', label: '和合本 (CUV)' }, { id: 'zh-lzz', label: '呂振中 (LZZ)' }, { id: 'zh-ncv', label: '新譯本 (NCV)' },
@@ -1063,6 +961,7 @@
                                       {loadedBibles[ver.id] ? (
                                           <div className="flex items-center gap-2 shrink-0">
                                               <span className="text-emerald-500 font-black flex items-center gap-0.5"><Check className="w-3 h-3"/> 已載入</span>
+                                              {/* 獨立刪除按鈕 */}
                                               <button 
                                                   onClick={() => handleDeleteVersion(ver.id, ver.label)}
                                                   className="w-5 h-5 flex items-center justify-center rounded-md bg-red-50 dark:bg-red-950/40 text-red-500 hover:bg-red-500 hover:text-white active:scale-90 transition-all shadow-sm"
@@ -1108,69 +1007,47 @@
                        </div>
                     </div>
                  )}
+
+                 {/* 右側「上鍵」與「下鍵」翻頁懸浮控制中心 */}
+                 {(activeTab === 'read' || activeTab === 'compare' || activeTab === 'search') && (
+                    <div className="fixed right-4 bottom-[180px] z-[60] flex flex-col gap-3">
+                        <button 
+                            onClick={() => mainRef.current?.scrollBy({ top: -window.innerHeight * 0.4, behavior: 'smooth' })}
+                            className="w-12 h-12 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-full shadow-lg flex items-center justify-center text-slate-700 dark:text-slate-300 active:scale-90 transition-transform"
+                        >
+                            <ChevronDown className="w-6 h-6 rotate-180" />
+                        </button>
+                        <button 
+                            onClick={() => mainRef.current?.scrollBy({ top: window.innerHeight * 0.4, behavior: 'smooth' })}
+                            className="w-12 h-12 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-full shadow-lg flex items-center justify-center text-slate-700 dark:text-slate-300 active:scale-90 transition-transform"
+                        >
+                            <ChevronDown className="w-6 h-6" />
+                        </button>
+                    </div>
+                 )}
+
+                 {/* 浮動導航列 */}
+                 {(activeTab === 'read' || activeTab === 'compare') && !fetching && (
+                    <div className="fixed bottom-[105px] left-0 right-0 px-4 max-w-lg mx-auto z-40">
+                       <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 p-1.5 rounded-2xl shadow-lg flex gap-1.5">
+                          <button onClick={handlePrevChapter} className="flex-[1.2] py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-black text-xs flex items-center justify-center gap-1 active:scale-95 transition-transform">
+                             <ChevronLeft className="w-4 h-4" /> 上一章
+                          </button>
+                          <div className="flex-[0.8] relative flex">
+                             <select value={viewState.chapter} onChange={(e) => setViewState(v => ({ ...v, chapter: parseInt(e.target.value) }))} className="w-full appearance-none bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800/50 rounded-xl text-indigo-500 dark:text-indigo-400 font-black text-[11px] text-center outline-none cursor-pointer py-2.5" style={{ textAlignLast: 'center' }}>
+                                {Array.from({ length: [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT].find(b => b.id === viewState.bookId).chapters }, (_, i) => i + 1).map(ch => (
+                                   <option key={ch} value={ch}>CH {ch}</option>
+                                ))}
+                             </select>
+                             <ChevronDown className="w-3 h-3 text-indigo-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          </div>
+                          <button onClick={handleNextChapter} className="flex-[1.2] py-2.5 bg-indigo-600 rounded-xl text-white font-black text-xs flex items-center justify-center gap-1 shadow-md active:scale-95 transition-transform">
+                             下一章 <ChevronDown className="w-4 h-4 -rotate-90" />
+                          </button>
+                       </div>
+                    </div>
+                 )}
               </main>
-
-              {/* 🛸 全分頁通用「懸浮觸控滑動艙 (Draggable Floating Scrollbar Capsule)」 */}
-              {floatPos.x !== -100 && (
-                  <div 
-                      style={{ left: `${floatPos.x}px`, top: `${floatPos.y}px` }}
-                      onPointerDown={handleCapsuleDown}
-                      onPointerMove={handleCapsuleMove}
-                      onPointerUp={handleCapsuleUp}
-                      className={`fixed z-[140] w-11 h-[200px] bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-full shadow-2xl flex flex-col items-center select-none touch-none transition-all ${isDraggingCapsule ? 'shadow-indigo-500/30 ring-2 ring-indigo-500/20 cursor-grabbing' : 'cursor-grab'}`}
-                  >
-                      {/* 頂部位置拖拽把手 (盲人紋路設計) */}
-                      <div className="w-full h-7 flex flex-col gap-0.5 justify-center items-center pt-2 opacity-30 shrink-0">
-                          <div className="w-3.5 h-[2px] bg-slate-500 dark:bg-slate-400 rounded-full"></div>
-                          <div className="w-3.5 h-[2px] bg-slate-500 dark:bg-slate-400 rounded-full"></div>
-                      </div>
-
-                      {/* 滑動軌道 (Scroll Track) */}
-                      <div 
-                          style={{ height: `${TRACK_HEIGHT}px` }}
-                          className="w-1.5 bg-slate-100 dark:bg-slate-800 rounded-full relative my-1 shrink-0"
-                      >
-                          {/* 核心流暢滑塊 (Scroll Thumb) */}
-                          <div 
-                              style={{ 
-                                  height: `${THUMB_HEIGHT}px`,
-                                  top: `${scrollRatio * MAX_TRAVEL}px`
-                              }}
-                              onPointerDown={handleThumbDown}
-                              onPointerMove={handleThumbMove}
-                              onPointerUp={handleThumbUp}
-                              className={`w-full left-0 bg-indigo-600 dark:bg-indigo-500 rounded-full absolute transition-shadow active:bg-indigo-700 dark:active:bg-indigo-400 ${isDraggingThumb ? 'cursor-grabbing shadow-md' : 'cursor-grab'}`}
-                          />
-                      </div>
-
-                      {/* 底部拖拽把手區 */}
-                      <div className="w-full h-5 flex justify-center items-center pb-2 opacity-20 shrink-0">
-                          <div className="w-1.5 h-1.5 bg-slate-500 dark:bg-slate-400 rounded-full"></div>
-                      </div>
-                  </div>
-              )}
-
-              {/* 浮動快捷導航列 (僅在讀經與對照分頁顯示) */}
-              {(activeTab === 'read' || activeTab === 'compare') && !fetching && (
-                <div className="fixed bottom-[105px] left-0 right-0 px-4 max-w-lg mx-auto z-40">
-                   <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 p-1.5 rounded-2xl shadow-lg flex gap-1.5">
-                      <button onClick={handlePrevChapter} className="flex-[1.2] py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-black text-xs flex items-center justify-center gap-1 active:scale-95 transition-transform">
-                         <ChevronLeft className="w-4 h-4" /> 上一章
-                      </button>
-                      <div className="flex-[0.8] relative flex">
-                         <select value={viewState.chapter} onChange={(e) => setViewState(v => ({ ...v, chapter: parseInt(e.target.value) }))} className="w-full appearance-none bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800/50 rounded-xl text-indigo-500 dark:text-indigo-400 font-black text-[11px] text-center outline-none cursor-pointer py-2.5" style={{ textAlignLast: 'center' }}>
-                            {Array.from({ length: [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT].find(b => b.id === viewState.bookId).chapters }, (_, i) => i + 1).map(ch => (
-                               <option key={ch} value={ch}>CH {ch}</option>
-                            ))}
-                         </select>
-                         <ChevronDown className="w-3 h-3 text-indigo-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      </div>
-                      <button onClick={handleNextChapter} className="flex-[1.2] py-2.5 bg-indigo-600 rounded-xl text-white font-black text-xs flex items-center justify-center gap-1 shadow-md active:scale-95 transition-transform">
-                         下一章 <ChevronDown className="w-4 h-4 -rotate-90" />
-                      </button>
-                   </div>
-                </div>
-              )}
 
               {/* 底部五向主導航列 */}
               <nav className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 pt-2.5 pb-9 grid grid-cols-5 sticky bottom-0 z-50 shadow-[0_-10px_20px_rgba(0,0,0,0.03)] shrink-0">
@@ -1192,7 +1069,7 @@
         );
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render((<App />));
+        root.render(<App />);
     </script>
 </body>
 </html>
