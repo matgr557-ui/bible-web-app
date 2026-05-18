@@ -15,7 +15,7 @@ jobs:
         uses: wajahatkarim3/webview-apk-action@v1
         with:
           # 【請將下面改做你嘅 GitHub 網頁網址】
-          app_url: "https://yourusername.github.io/your-repo/"
+          app_url: "https://matgr557-ui.github.io/bible-web-app/"
           # 你個 App 嘅名（可以用英文）
           app_name: "MyGitHubApp"
           # 包名（通常係反向網址，例如 com.你的名字.你的app名）
