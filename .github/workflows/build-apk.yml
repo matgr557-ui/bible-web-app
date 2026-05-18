@@ -1,4 +1,4 @@
-name: Generate Android APK
+name: Generate Android APK (Capacitor)
 
 on:
   workflow_dispatch: # 畀你隨時手動點擊「一鍵生成」
@@ -11,13 +11,41 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 使用專門打包本地 HTML 檔案嘅穩定工具
-      - name: Convert Web App to APK
-        uses: jonasmerlin/webapp-to-apk@v2
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          # 填寫你 App 嘅內部 ID（用全小寫英文，格式如 com.作者名.app名）
-          appId: "com.matgr557ui.biblewebapp"
-          # 你手機 App 顯示出嚟嘅名
-          appName: "Bible Web App"
-          # 核心設定：點（.）代表直接讀取你根目錄嘅 index.html
-          webAppDir: "."
+          node-version: 20
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Install & Build with Capacitor
+        run: |
+          # 1. 初始化一個乾淨嘅環境
+          npm init -y
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          
+          # 2. 建立一個乾淨嘅網頁資料夾 (www)，將你的 index.html 同相關檔案放進去
+          mkdir www
+          find . -maxdepth 1 ! -name '.' ! -name '..' ! -name 'www' ! -name '.git' ! -name '.github' ! -name 'package.json' ! -name 'package-lock.json' ! -name 'node_modules' -exec cp -r {} www/ \;
+          
+          # 3. 初始化 Capacitor 專案
+          # (你可以自由更改 App 名稱 "Bible Web App" 或者是 包名 "com.matgr557ui.biblewebapp")
+          npx cap init "Bible Web App" "com.matgr557ui.biblewebapp" --web-dir www
+          
+          # 4. 建立 Android 平台並將網頁同步進去
+          npx cap add android
+          npx cap sync android
+          
+          # 5. 進入 Android 目錄，直接調用 Gradle 編譯成 APK
+          cd android
+          ./gradlew assembleDebug
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bible-Web-App-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
