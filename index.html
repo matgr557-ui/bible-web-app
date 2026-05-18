@@ -70,7 +70,7 @@
             'moon': <Fragment><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></Fragment>,
             'database': <Fragment><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></Fragment>,
             'book-open': <Fragment><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></Fragment>,
-            'settings': <Fragment><path d="M12.22 2h-.44a2 2 0 0 0-2 2l-.2.1a2 2 0 0 1-2.81.25l-.17-.1a2 2 0 0 0-2.81.14l-.31.31a2 2 0 0 0 .14 2.81l.1.17a2 2 0 0 1-.25 2.81l-.1.2a2 2 0 0 0-2 2v.44a2 2 0 0 0 2 2l.1.2a2 2 0 0 1 .25 2.81l-.1.17a2 2 0 0 0-.14 2.81l.31.31a2 2 0 0 0 2.81-.14l.17-.1a2 2 0 0 1 2.81-.25l.2.1a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2l.2-.1a2 2 0 0 1 2.81-.25l.17.1a2 2 0 0 0 2.81-.14l.31-.31a2 2 0 0 0-.14-2.81l-.1-.17a2 2 0 0 1 .25-2.81l.1-.2a2 2 0 0 0 2 2v-.44a2 2 0 0 0-2-2l-.1-.2a2 2 0 0 1-.25-2.81l.1-.17a2 2 0 0 0 .14-2.81l-.31-.31a2 2 0 0 0-2.81.14l-.17.1a2 2 0 0 1-2.81.25l-.2-.1a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></Fragment>
+            'settings': <Fragment><path d="M12.22 2h-.44a2 2 0 0 0-2 2l-.2.1a2 2 0 0 1-2.81.25l-.17-.1a2 2 0 0 0-2.81.14l-.31.31a2 2 0 0 0 .14 2.81l.1.17a2 2 0 0 1-.25 2.81l-.1.2a2 2 0 0 0-2 2v.44a2 2 0 0 0 2 2l.1.2a2 2 0 0 1 .25 2.81l-.1.17a2 2 0 0 0-.14 2.81l.31.31a2 2 0 0 0 2.81-.14l.17-.1a2 2 0 0 1 2.81-.25l.2-.1a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></Fragment>
         };
 
         const LucideIcon = ({ name, className = '', size = 20, strokeWidth = 2, ...props }) => {
@@ -344,54 +344,110 @@
 
           const mainRef = useRef(null);
 
-          // 🪐 「懸浮觸控滑動艙」核心狀態與變數結構
+          // 🪐 「懸浮觸控滑動艙 (Scrollbar Capsule)」核心進階狀態與指針變數
           const [floatPos, setFloatPos] = useState({ x: -100, y: -100 });
-          const [isDragging, setIsDragging] = useState(false);
-          const dragStart = useRef({ x: 0, y: 0 });
-          const currentPos = useRef({ x: 0, y: 0 });
+          const [isDraggingCapsule, setIsDraggingCapsule] = useState(false);
+          const [isDraggingThumb, setIsDraggingThumb] = useState(false);
+          const [scrollRatio, setScrollRatio] = useState(0); // 0 至 1 滾動比例
 
-          // 初始化控制艙位置並綁定 Resize 監聽
+          const capsuleDragStart = useRef({ x: 0, y: 0 });
+          const currentCapsulePos = useRef({ x: 0, y: 0 });
+          const thumbDragStart = useRef({ y: 0, scrollTop: 0 });
+
+          const TRACK_HEIGHT = 140; // 滑動軌道總長度 (px)
+          const THUMB_HEIGHT = 36;  // 滑塊長度 (px)
+          const MAX_TRAVEL = TRACK_HEIGHT - THUMB_HEIGHT; // 84px 可跑行程
+
+          // 監聽經文 Main 視窗實際滾動事件，實時回傳更新滑塊比例
           useEffect(() => {
-              const handleResize = () => {
-                  if (!isDragging) {
-                      const x = window.innerWidth - 64; // 靠右 16px (控制艙寬度約 48px)
-                      const y = window.innerHeight - 280; // 避開底部導航列
-                      setFloatPos({ x, y });
-                      currentPos.current = { x, y };
+              const mainEl = mainRef.current;
+              if (!mainEl) return;
+
+              const syncCapsuleThumb = () => {
+                  const { scrollTop, scrollHeight, clientHeight } = mainEl;
+                  const maxScroll = scrollHeight - clientHeight;
+                  if (maxScroll > 0) {
+                      setScrollRatio(scrollTop / maxScroll);
+                  } else {
+                      setScrollRatio(0);
                   }
               };
-              if (appReady) handleResize();
-              window.addEventListener('resize', handleResize);
-              return () => window.removeEventListener('resize', handleResize);
+
+              mainEl.addEventListener('scroll', syncCapsuleThumb);
+              // 切換分頁或經文載入完畢時即時跑一次初始化
+              setTimeout(syncCapsuleThumb, 100);
+
+              return () => mainEl.removeEventListener('scroll', syncCapsuleThumb);
+          }, [activeTab, verses, bibleSearchResults]);
+
+          // 自動定位浮動艙初始位置 (靠右)
+          useEffect(() => {
+              const initPosition = () => {
+                  if (!isDraggingCapsule && !isDraggingThumb) {
+                      const x = window.innerWidth - 60; // 靠右邊緣 12px
+                      const y = window.innerHeight - 340; // 避開底部與切換欄
+                      setFloatPos({ x, y });
+                      currentCapsulePos.current = { x, y };
+                  }
+              };
+              if (appReady) initPosition();
+              window.addEventListener('resize', initPosition);
+              return () => window.removeEventListener('resize', initPosition);
           }, [appReady]);
 
-          // 觸控拖拽事件處理函數組
-          const handlePointerDown = (e) => {
-              setIsDragging(true);
-              dragStart.current = {
-                  x: e.clientX - currentPos.current.x,
-                  y: e.clientY - currentPos.current.y
+          // 1. 控制艙整體「移動外殼位置」觸控拖拉函數
+          const handleCapsuleDown = (e) => {
+              setIsDraggingCapsule(true);
+              capsuleDragStart.current = {
+                  x: e.clientX - currentCapsulePos.current.x,
+                  y: e.clientY - currentCapsulePos.current.y
               };
               e.currentTarget.setPointerCapture(e.pointerId);
           };
 
-          const handlePointerMove = (e) => {
-              if (!isDragging) return;
-              let newX = e.clientX - dragStart.current.x;
-              let newY = e.clientY - dragStart.current.y;
+          const handleCapsuleMove = (e) => {
+              if (!isDraggingCapsule) return;
+              let newX = e.clientX - capsuleDragStart.current.x;
+              let newY = e.clientY - capsuleDragStart.current.y;
 
-              // 安全邊界裁切（防止艙體飛出屏幕外）
-              const capsuleWidth = 48;
-              const capsuleHeight = 118;
-              newX = Math.max(8, Math.min(window.innerWidth - capsuleWidth - 8, newX));
-              newY = Math.max(8, Math.min(window.innerHeight - capsuleHeight - 140, newY)); // 高度預留 140px 避開 Navigation bar
+              // 安全視窗邊界限制裁切
+              newX = Math.max(8, Math.min(window.innerWidth - 48 - 8, newX));
+              newY = Math.max(8, Math.min(window.innerHeight - 200 - 100, newY));
 
               setFloatPos({ x: newX, y: newY });
-              currentPos.current = { x: newX, y: newY };
+              currentCapsulePos.current = { x: newX, y: newY };
           };
 
-          const handlePointerUp = () => {
-              setIsDragging(false);
+          const handleCapsuleUp = () => {
+              setIsDraggingCapsule(false);
+          };
+
+          // 2. 控制艙核心「滑塊 (Thumb) 操控滾動經文」觸控拖拉函數
+          const handleThumbDown = (e) => {
+              e.stopPropagation(); // 阻止事件外流，避免觸發外殼移動
+              setIsDraggingThumb(true);
+              thumbDragStart.current = {
+                  y: e.clientY,
+                  scrollTop: mainRef.current ? mainRef.current.scrollTop : 0
+              };
+              e.currentTarget.setPointerCapture(e.pointerId);
+          };
+
+          const handleThumbMove = (e) => {
+              if (!isDraggingThumb || !mainRef.current) return;
+              const deltaY = e.clientY - thumbDragStart.current.y;
+              
+              const { scrollHeight, clientHeight } = mainRef.current;
+              const maxScroll = scrollHeight - clientHeight;
+              if (maxScroll <= 0) return;
+
+              // 比例公式轉換：畫面上拖動的像素距離換算成內容捲動的實際高度
+              const deltaScroll = (deltaY / MAX_TRAVEL) * maxScroll;
+              mainRef.current.scrollTop = thumbDragStart.current.scrollTop + deltaScroll;
+          };
+
+          const handleThumbUp = () => {
+              setIsDraggingThumb(false);
           };
 
           useEffect(() => {
@@ -497,7 +553,7 @@
                 let cuv = loadedBibles['zh-cuv']?.[viewState.bookId]?.[viewState.chapter]?.[i];
                 let wlc = loadedBibles['orig-wlc']?.[viewState.bookId]?.[viewState.chapter]?.[i];
                 if (isDemo && viewState.bookId === 'GEN' && viewState.chapter === 1) {
-                    if (i === 1) { cuv = "起初，神創造天地。"; wlc = "בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַשָּׁמַיִם וְאֵת הָאָרֶץ"; }
+                    if (i === 1) { cuv = "起初，神創造天地。"; wlc = "בְּרֵאשִׁית בָּ反א אֱלֹהִים אֵת הַשָּׁמַיִם וְאֵת הָאָרֶץ"; }
                     if (i === 2) cuv = "地是空虛混沌，淵面黑暗；神的靈運行在水面上。";
                 }
                 newVerses.push({
@@ -669,7 +725,7 @@
                          <h3 className="font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
                             <BookOpen className="w-5 h-5 text-indigo-500" /> Strong's 字典搜尋
                          </h3>
-                         <select value={dictTarget} onChange={e => { setDictTarget(e.target.value); setDictResults(executeDictSearch(dictQuery, e.target.value)); }} className="text-[11px] font-black bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 outline-none text-indigo-600 dark:text-indigo-400 cursor-pointer">
+                         <select value={dictTarget} onChange={e => { setDictTarget(e.target.value); setDictResults(executeDictSearch(dictQuery, e.target.value)); }} className="text-[11px] font-black bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 outline-none text-indigo-600 dark:text-indigo-400 pointer-events-auto cursor-pointer">
                             <option value="dict-wlc-strongs">WLC 希伯來</option>
                             <option value="dict-lxx-strongs">LXX 七十士</option>
                             <option value="dict-na28-strongs">NA28 新約希臘</option>
@@ -1054,39 +1110,43 @@
                  )}
               </main>
 
-              {/* 🛸 完美升級：全分頁通用「懸浮觸控滑動艙」（跨分頁自適應拖拽面板） */}
+              {/* 🛸 全分頁通用「懸浮觸控滑動艙 (Draggable Floating Scrollbar Capsule)」 */}
               {floatPos.x !== -100 && (
                   <div 
                       style={{ left: `${floatPos.x}px`, top: `${floatPos.y}px` }}
-                      onPointerDown={handlePointerDown}
-                      onPointerMove={handlePointerMove}
-                      onPointerUp={handlePointerUp}
-                      className={`fixed z-[140] w-12 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xl flex flex-col items-center py-2 select-none touch-none transition-shadow ${isDragging ? 'shadow-indigo-500/20 ring-2 ring-indigo-500/30 cursor-grabbing' : 'cursor-grab'}`}
+                      onPointerDown={handleCapsuleDown}
+                      onPointerMove={handleCapsuleMove}
+                      onPointerUp={handleCapsuleUp}
+                      className={`fixed z-[140] w-11 h-[200px] bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-full shadow-2xl flex flex-col items-center select-none touch-none transition-all ${isDraggingCapsule ? 'shadow-indigo-500/30 ring-2 ring-indigo-500/20 cursor-grabbing' : 'cursor-grab'}`}
                   >
-                      {/* 上翻頁按鈕 */}
-                      <button 
-                          onPointerDown={(e) => e.stopPropagation()} 
-                          onClick={() => mainRef.current?.scrollBy({ top: -window.innerHeight * 0.4, behavior: 'smooth' })}
-                          className="w-9 h-9 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full flex items-center justify-center hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 transition-all active:scale-90"
-                      >
-                          <ChevronDown className="w-5 h-5 rotate-180" />
-                      </button>
-
-                      {/* 艙體中央拖拽安全防滑刻紋 */}
-                      <div className="flex flex-col gap-0.5 my-2.5 justify-center items-center opacity-40 pointer-events-none">
-                          <div className="w-4 h-[2px] bg-slate-400 dark:bg-slate-500 rounded-full"></div>
-                          <div className="w-4 h-[2px] bg-slate-400 dark:bg-slate-500 rounded-full"></div>
-                          <div className="w-4 h-[2px] bg-slate-400 dark:bg-slate-500 rounded-full"></div>
+                      {/* 頂部位置拖拽把手 (盲人紋路設計) */}
+                      <div className="w-full h-7 flex flex-col gap-0.5 justify-center items-center pt-2 opacity-30 shrink-0">
+                          <div className="w-3.5 h-[2px] bg-slate-500 dark:bg-slate-400 rounded-full"></div>
+                          <div className="w-3.5 h-[2px] bg-slate-500 dark:bg-slate-400 rounded-full"></div>
                       </div>
 
-                      {/* 下翻頁按鈕 */}
-                      <button 
-                          onPointerDown={(e) => e.stopPropagation()} 
-                          onClick={() => mainRef.current?.scrollBy({ top: window.innerHeight * 0.4, behavior: 'smooth' })}
-                          className="w-9 h-9 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full flex items-center justify-center hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 transition-all active:scale-90"
+                      {/* 滑動軌道 (Scroll Track) */}
+                      <div 
+                          style={{ height: `${TRACK_HEIGHT}px` }}
+                          className="w-1.5 bg-slate-100 dark:bg-slate-800 rounded-full relative my-1 shrink-0"
                       >
-                          <ChevronDown className="w-5 h-5" />
-                      </button>
+                          {/* 核心流暢滑塊 (Scroll Thumb) */}
+                          <div 
+                              style={{ 
+                                  height: `${THUMB_HEIGHT}px`,
+                                  top: `${scrollRatio * MAX_TRAVEL}px`
+                              }}
+                              onPointerDown={handleThumbDown}
+                              onPointerMove={handleThumbMove}
+                              onPointerUp={handleThumbUp}
+                              className={`w-full left-0 bg-indigo-600 dark:bg-indigo-500 rounded-full absolute transition-shadow active:bg-indigo-700 dark:active:bg-indigo-400 ${isDraggingThumb ? 'cursor-grabbing shadow-md' : 'cursor-grab'}`}
+                          />
+                      </div>
+
+                      {/* 底部拖拽把手區 */}
+                      <div className="w-full h-5 flex justify-center items-center pb-2 opacity-20 shrink-0">
+                          <div className="w-1.5 h-1.5 bg-slate-500 dark:bg-slate-400 rounded-full"></div>
+                      </div>
                   </div>
               )}
 
@@ -1132,7 +1192,7 @@
         );
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        root.render((<App />));
     </script>
 </body>
 </html>
