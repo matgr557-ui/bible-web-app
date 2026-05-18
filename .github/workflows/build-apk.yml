@@ -11,18 +11,13 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Build Web To APK
-        uses: wajahatkarim3/webview-apk-action@v1
+      # 使用專門打包本地 HTML 檔案嘅穩定工具
+      - name: Convert Web App to APK
+        uses: jonasmerlin/webapp-to-apk@v2
         with:
-          # 【請將下面改做你嘅 GitHub 網頁網址】
-          app_url: "https://matgr557-ui.github.io/bible-web-app/"
-          # 你個 App 嘅名（可以用英文）
-          app_name: "MyGitHubApp"
-          # 包名（通常係反向網址，例如 com.你的名字.你的app名）
-          package_name: "com.example.mygithubapp"
-
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: my-android-apk
-          path: ./**/*.apk
+          # 填寫你 App 嘅內部 ID（用全小寫英文，格式如 com.作者名.app名）
+          appId: "com.matgr557ui.biblewebapp"
+          # 你手機 App 顯示出嚟嘅名
+          appName: "Bible Web App"
+          # 核心設定：點（.）代表直接讀取你根目錄嘅 index.html
+          webAppDir: "."
