@@ -5,12 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Bible Explorer - 聖經原文對照探索器</title>
     
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
         }
     </script>
+    <script src="./js/react.production.min.js"></script>
+    <script src="./js/react-dom.production.min.js"></script>
+    <script src="./js/babel.min.js"></script>
 
     <style>
         /* 核心修復：徹底禁用 Android WebView 系統內建的下拉重新整理 (Pull-to-refresh) 手勢 */
@@ -35,11 +38,6 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
-
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin></script>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
 
@@ -70,7 +68,9 @@
             'moon': <Fragment><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></Fragment>,
             'database': <Fragment><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></Fragment>,
             'book-open': <Fragment><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></Fragment>,
-            'settings': <Fragment><path d="M12.22 2h-.44a2 2 0 0 0-2 2l-.2.1a2 2 0 0 1-2.81.25l-.17-.1a2 2 0 0 0-2.81.14l-.31.31a2 2 0 0 0 .14 2.81l.1.17a2 2 0 0 1-.25 2.81l-.1.2a2 2 0 0 0-2 2v.44a2 2 0 0 0 2 2l.1.2a2 2 0 0 1 .25 2.81l-.1.17a2 2 0 0 0-.14 2.81l.31.31a2 2 0 0 0 2.81-.14l.17-.1a2 2 0 0 1 2.81-.25l.2.1a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2l.2-.1a2 2 0 0 1 2.81-.25l.17.1a2 2 0 0 0 2.81-.14l.31-.31a2 2 0 0 0-.14-2.81l-.1-.17a2 2 0 0 1 .25-2.81l.1-.2a2 2 0 0 0 2 2v-.44a2 2 0 0 0-2-2l-.1-.2a2 2 0 0 1-.25-2.81l.1-.17a2 2 0 0 0 .14-2.81l-.31-.31a2 2 0 0 0-2.81.14l-.17.1a2 2 0 0 1-2.81.25l-.2-.1a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></Fragment>
+            'settings': <Fragment><path d="M12.22 2h-.44a2 2 0 0 0-2 2l-.2.1a2 2 0 0 1-2.81.25l-.17-.1a2 2 0 0 0-2.81.14l-.31.31a2 2 0 0 0 .14 2.81l.1.17a2 2 0 0 1-.25 2.81l-.1.2a2 2 0 0 0-2 2v.44a2 2 0 0 0 2 2l.1.2a2 2 0 0 1 .25 2.81l-.1.17a2 2 0 0 0-.14 2.81l.31.31a2 2 0 0 0 2.81-.14l.17-.1a2 2 0 0 1 2.81-.25l.2.1a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2l.2-.1a2 2 0 0 1 2.81-.25l.17.1a2 2 0 0 0 2.81-.14l.31-.31a2 2 0 0 0-.14-2.81l-.1-.17a2 2 0 0 1 .25-2.81l.1-.2a2 2 0 0 0 2 2v-.44a2 2 0 0 0-2-2l-.1-.2a2 2 0 0 1-.25-2.81l.1-.17a2 2 0 0 0 .14-2.81l-.31-.31a2 2 0 0 0-2.81.14l-.17.1a2 2 0 0 1-2.81.25l-.2-.1a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></Fragment>,
+            // 🔥 新增：經典六點盲人點字防滑手把圖標
+            'grip-vertical': <Fragment><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="6" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="15" cy="18" r="1.5"/></Fragment>
         };
 
         const LucideIcon = ({ name, className = '', size = 20, strokeWidth = 2, ...props }) => {
@@ -137,7 +137,7 @@
             { name: '馬太福音', en: 'Matthew', abbr: 'Mat', chapters: 28, id: 'MAT' }, { name: '馬可福音', en: 'Mark', abbr: 'Mrk', chapters: 16, id: 'MRK' },
             { name: '路加福音', en: 'Luke', abbr: 'Luk', chapters: 24, id: 'LUK' }, { name: '約翰福音', en: 'John', abbr: 'Jhn', chapters: 21, id: 'JHN' },
             { name: '使徒行傳', en: 'Acts', abbr: 'Act', chapters: 28, id: 'ACT' }, { name: '羅馬書', en: 'Romans', abbr: 'Rom', chapters: 16, id: 'ROM' },
-            { name: '哥林多前書', en: '1 Corinthians', abbr: '1Co', chapters: 16, id: '1CO' }, { name: '哥林多後書', en: '2 Corinthians', abbr: '2Co', chapters: 13, id: '2CO' },
+            { name: '哥林多前書', en: '1 Chronicles', abbr: '1Co', chapters: 16, id: '1CO' }, { name: '哥林多後書', en: '2 Chronicles', abbr: '2Co', chapters: 13, id: '2CO' },
             { name: '加拉太書', en: 'Galatians', abbr: 'Gal', chapters: 6, id: 'GAL' }, { name: '以弗所書', en: 'Ephesians', abbr: 'Eph', chapters: 6, id: 'EPH' },
             { name: '腓立比書', en: 'Philippians', abbr: 'Php', chapters: 4, id: 'PHL' }, { name: '歌羅西書', en: 'Colossians', abbr: 'Col', chapters: 4, id: 'COL' },
             { name: '帖撒羅尼迦前書', en: '1 Thessalonians', abbr: '1Th', chapters: 5, id: '1TH' }, { name: '帖撒羅尼迦後書', en: '2 Thessalonians', abbr: '2Th', chapters: 3, id: '2TH' },
@@ -146,7 +146,7 @@
             { name: '希伯來書', en: 'Hebrews', abbr: 'Heb', chapters: 13, id: 'HEB' }, { name: '雅各書', en: 'James', abbr: 'Jas', chapters: 5, id: 'JAS' },
             { name: '彼得前書', en: '1 Peter', abbr: '1Pe', chapters: 5, id: '1PE' }, { name: '彼得後書', en: '2 Peter', abbr: '2Pe', chapters: 3, id: '2PE' },
             { name: '約翰一書', en: '1 John', abbr: '1Jn', chapters: 5, id: '1JO' }, { name: '約翰二書', en: '2 John', abbr: '2Jn', chapters: 1, id: '2JO' },
-            { name: '約翰三書', en: '3 John', abbr: '3Jn', chapters: 1, id: '3JO' }, { name: '猶大書', en: 'Jude', abbr: 'Jud', chapters: 1, id: 'JUD' },
+            { name: '約翰三書', humming: '3 John', abbr: '3Jn', chapters: 1, id: '3JO' }, { name: '猶大書', en: 'Jude', abbr: 'Jud', chapters: 1, id: 'JUD' },
             { name: '啟示錄', en: 'Revelation', abbr: 'Rev', chapters: 22, id: 'REV' }
           ]
         };
@@ -192,7 +192,6 @@
           });
         };
 
-        // 🔥 新增：從資料庫精準刪除單一指定項目的核心 API
         const deleteFromDB = async (id) => {
           const db = await initDB();
           return new Promise((resolve, reject) => {
@@ -241,7 +240,6 @@
                 bookMap[b.en.toUpperCase()] = b.id; bookMap[b.abbr.toUpperCase()] = b.id;
             });
             
-            // 已完美支援 Exod 等四字特殊標籤
             const ALIASES = {
               'EXOD': 'EXO', 'DEUT': 'DEU', 'JOSH': 'JSH', 'JUDG': 'JDG',
               '1CHR': '1CH', '2CHR': '2CH', '1SAM': '1SA', '2SAM': '2SA', '1KGS': '1KI', '2KGS': '2KI', 
@@ -299,7 +297,7 @@
                             ensurePath(bId, null);
                             for (let chKey in root[bKey]) {
                                 ensurePath(bId, chKey);
-                                for (let vKey in root[bKey][chKey]) { result[bId][chKey][vKey] = root[bKey][chKey][vKey]; }
+                                for (let vKey in root[bKey][chKey]) { result[bKey][chKey][vKey] = root[bKey][chKey][vKey]; }
                             }
                         }
                     }
@@ -345,6 +343,95 @@
           const [bibleSearchResults, setBibleSearchResults] = useState([]);
 
           const mainRef = useRef(null);
+
+          // 🚀 【全新智慧升級】滑動艙核心操控數據
+          const trackRef = useRef(null);
+          const widgetDragStart = useRef({ startX: 0, startY: 0, posX: 0, posY: 0 });
+          const [scrollPercent, setScrollPercent] = useState(0);
+          const [widgetPos, setWidgetPos] = useState(() => {
+              const w = typeof window !== 'undefined' ? window.innerWidth : 360;
+              const h = typeof window !== 'undefined' ? window.innerHeight : 800;
+              return { x: w - 60, y: h - 380 }; // 預設靠右下方安全區
+          });
+
+          // 當畫面尺寸改變時，確保滑動艙不會飄走
+          useEffect(() => {
+              const handleResize = () => {
+                  setWidgetPos(p => ({
+                      x: Math.min(window.innerWidth - 60, Math.max(10, p.x)),
+                      y: Math.min(window.innerHeight - 260, Math.max(10, p.y))
+                  }));
+              };
+              window.addEventListener('resize', handleResize);
+              return () => window.removeEventListener('resize', handleResize);
+          }, []);
+
+          // 監聽主頁面原生滑動，即時反映進度到滑動艙
+          const handleMainScroll = () => {
+              if (!mainRef.current) return;
+              const { scrollTop, scrollHeight, clientHeight } = mainRef.current;
+              const maxScroll = scrollHeight - clientHeight;
+              if (maxScroll <= 0) {
+                  setScrollPercent(0);
+              } else {
+                  setScrollPercent((scrollTop / maxScroll) * 100);
+              }
+          };
+
+          // 切換章節或分頁時，自動校正進度條
+          useEffect(() => {
+              const timer = setTimeout(() => handleMainScroll(), 120);
+              return () => clearTimeout(timer);
+          }, [activeTab, viewState, fetching]);
+
+          // 搬移滑動艙本身位置嘅觸控邏輯
+          const handleWidgetDragStart = (e) => {
+              const touch = e.touches[0];
+              widgetDragStart.current = {
+                  startX: touch.clientX,
+                  startY: touch.clientY,
+                  posX: widgetPos.x,
+                  posY: widgetPos.y
+              };
+          };
+
+          const handleWidgetDragMove = (e) => {
+              const touch = e.touches[0];
+              const dx = touch.clientX - widgetDragStart.current.startX;
+              const dy = touch.clientY - widgetDragStart.current.startY;
+              
+              let newX = widgetDragStart.current.posX + dx;
+              let newY = widgetDragStart.current.posY + dy;
+              
+              // 限制拖曳不出視窗邊界
+              newX = Math.min(window.innerWidth - 60, Math.max(10, newX));
+              newY = Math.min(window.innerHeight - 260, Math.max(10, newY));
+              
+              setWidgetPos({ x: newX, y: newY });
+          };
+
+          // 操控軌道滾動經文嘅觸控邏輯
+          const processSliderTouch = (touchY) => {
+              if (!mainRef.current || !trackRef.current) return;
+              const rect = trackRef.current.getBoundingClientRect();
+              let pct = ((touchY - rect.top) / rect.height) * 100;
+              pct = Math.min(100, Math.max(0, pct));
+              setScrollPercent(pct);
+              
+              const maxScroll = mainRef.current.scrollHeight - mainRef.current.clientHeight;
+              if (maxScroll > 0) {
+                  mainRef.current.scrollTop = (pct / 100) * maxScroll;
+              }
+          };
+
+          const handleTrackTouchStart = (e) => {
+              processSliderTouch(e.touches[0].clientY);
+          };
+
+          const handleTrackTouchMove = (e) => {
+              e.preventDefault(); // 阻止背景跟著橡皮筋彈跳
+              processSliderTouch(e.touches[0].clientY);
+          };
 
           useEffect(() => {
             setSavedState('bible_dark', isDarkMode);
@@ -414,14 +501,13 @@
               if (mainRef.current) mainRef.current.scrollTop = 0;
           };
 
-          // 🔥 新增：處理單一譯本刪除的點擊事件
           const handleDeleteVersion = async (id, label) => {
               if (window.confirm(`確定要單獨刪除「${label}」的全部數據嗎？`)) {
                   try {
                       await deleteFromDB(id);
                       setLoadedBibles(prev => {
                           const next = { ...prev };
-                          delete next[id]; // 從記憶體狀態中剔除
+                          delete next[id];
                           return next;
                       });
                       setToastMsg(`🗑️ 已成功刪除：${label}`);
@@ -714,8 +800,8 @@
                 </div>
               </header>
 
-              {/* 主內容區：套用 ref 控制，並全面改回 no-scrollbar 隱藏線條 */}
-              <main ref={mainRef} className="flex-1 overflow-y-auto max-w-lg mx-auto w-full relative no-scrollbar">
+              {/* 主內容區：綁定 handleMainScroll 監聽，並保持 no-scrollbar 極簡無滾動條外觀 */}
+              <main ref={mainRef} onScroll={handleMainScroll} className="flex-1 overflow-y-auto max-w-lg mx-auto w-full relative no-scrollbar">
                  {activeTab === 'home' && (
                     <div className="px-6 py-10 flex flex-col h-full animate-in fade-in">
                        <div className="flex flex-col items-center justify-center py-10 gap-4 mb-8 border-b border-slate-200 dark:border-slate-800 pb-12">
@@ -945,7 +1031,6 @@
                                 </div>
                              </div>
                              
-                             {/* 🔥 核心升級：本地資料庫列表支援「單項獨立刪除」 */}
                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6">
                                 {[
                                   { id: 'zh-cuv', label: '和合本 (CUV)' }, { id: 'zh-lzz', label: '呂振中 (LZZ)' }, { id: 'zh-ncv', label: '新譯本 (NCV)' },
@@ -961,11 +1046,9 @@
                                       {loadedBibles[ver.id] ? (
                                           <div className="flex items-center gap-2 shrink-0">
                                               <span className="text-emerald-500 font-black flex items-center gap-0.5"><Check className="w-3 h-3"/> 已載入</span>
-                                              {/* 獨立刪除按鈕 */}
                                               <button 
                                                   onClick={() => handleDeleteVersion(ver.id, ver.label)}
                                                   className="w-5 h-5 flex items-center justify-center rounded-md bg-red-50 dark:bg-red-950/40 text-red-500 hover:bg-red-500 hover:text-white active:scale-90 transition-all shadow-sm"
-                                                  title="單獨刪除此項目"
                                               >
                                                   <X className="w-3 h-3" />
                                               </button>
@@ -1008,24 +1091,6 @@
                     </div>
                  )}
 
-                 {/* 右側「上鍵」與「下鍵」翻頁懸浮控制中心 */}
-                 {(activeTab === 'read' || activeTab === 'compare' || activeTab === 'search') && (
-                    <div className="fixed right-4 bottom-[180px] z-[60] flex flex-col gap-3">
-                        <button 
-                            onClick={() => mainRef.current?.scrollBy({ top: -window.innerHeight * 0.4, behavior: 'smooth' })}
-                            className="w-12 h-12 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-full shadow-lg flex items-center justify-center text-slate-700 dark:text-slate-300 active:scale-90 transition-transform"
-                        >
-                            <ChevronDown className="w-6 h-6 rotate-180" />
-                        </button>
-                        <button 
-                            onClick={() => mainRef.current?.scrollBy({ top: window.innerHeight * 0.4, behavior: 'smooth' })}
-                            className="w-12 h-12 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-full shadow-lg flex items-center justify-center text-slate-700 dark:text-slate-300 active:scale-90 transition-transform"
-                        >
-                            <ChevronDown className="w-6 h-6" />
-                        </button>
-                    </div>
-                 )}
-
                  {/* 浮動導航列 */}
                  {(activeTab === 'read' || activeTab === 'compare') && !fetching && (
                     <div className="fixed bottom-[105px] left-0 right-0 px-4 max-w-lg mx-auto z-40">
@@ -1048,6 +1113,43 @@
                     </div>
                  )}
               </main>
+
+              {/* 🚀 【全球首創】可任意全畫面拖曳位置、全分頁通用之懸浮觸控滑動艙 */}
+              <div 
+                  style={{ left: `${widgetPos.x}px`, top: `${widgetPos.y}px` }} 
+                  className="fixed w-11 h-48 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl flex flex-col items-center py-2 select-none z-[100] transition-colors duration-300"
+              >
+                  {/* 頂部拖曳把手區：按住此六點圖標即可隨意搬移整條滑動艙 */}
+                  <div 
+                      onTouchStart={handleWidgetDragStart}
+                      onTouchMove={handleWidgetDragMove}
+                      className="w-full h-7 flex items-center justify-center text-slate-400 dark:text-slate-500 active:text-indigo-500 cursor-grab active:cursor-grabbing shrink-0"
+                  >
+                      <LucideIcon name="grip-vertical" size={14} />
+                  </div>
+
+                  {/* 中間高靈敏度觸控調校軌道 */}
+                  <div 
+                      ref={trackRef}
+                      onTouchStart={handleTrackTouchStart}
+                      onTouchMove={handleTrackTouchMove}
+                      className="w-2.5 flex-1 bg-slate-100 dark:bg-slate-800 rounded-full relative cursor-pointer my-1 border border-slate-200/40 dark:border-slate-700/40"
+                  >
+                      {/* 游標按鈕 (Thumb) */}
+                      <div 
+                          style={{ top: `calc(${scrollPercent}% - 10px)` }}
+                          className="w-5 h-5 bg-indigo-600 dark:bg-indigo-500 rounded-full absolute left-1/2 -translate-x-1/2 shadow-md active:scale-110 active:bg-indigo-700 transition-transform duration-75 flex items-center justify-center"
+                      >
+                          {/* 內置裝飾白點 */}
+                          <div className="w-1 h-1 bg-white rounded-full"></div>
+                      </div>
+                  </div>
+                  
+                  {/* 底部百分比數字即時反饋 */}
+                  <div className="text-[9px] font-black text-slate-400 dark:text-slate-500 select-none shrink-0 tracking-tighter scale-90">
+                      {Math.round(scrollPercent)}%
+                  </div>
+              </div>
 
               {/* 底部五向主導航列 */}
               <nav className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 pt-2.5 pb-9 grid grid-cols-5 sticky bottom-0 z-50 shadow-[0_-10px_20px_rgba(0,0,0,0.03)] shrink-0">
