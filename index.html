@@ -38,7 +38,6 @@
 
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    
     <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin></script>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
@@ -48,6 +47,36 @@
     <script type="text/babel">
         const { useState, useEffect, useCallback, Fragment, useRef } = React;
         
+        // ==========================================
+        // ⚠️ 雲端資料庫設定
+        // ==========================================
+        const GITHUB_BASE_URL = 'https://raw.githubusercontent.com/matgr557-ui/bible-web-app/main';
+
+        const CLOUD_FILES = {
+          'zh-cuv': 'bible_cuv_trad_structured_final.json',
+          'zh-lzz': 'lzz_bible_traditional.json',
+          'zh-ncv': 'cnv_traditional.json',
+          'en-niv': 'niv_bible_full.json',
+          'en-nasb': 'nasb20_complete.json',
+          'en-kjv': 'kjv_bible.json',
+          'orig-wlc': 'bible_wlc_full.json',
+          'orig-lxx': 'lxx_bible.json',
+          'orig-na28': 'NA28_Greek_New_Testament.json',
+          // 支援多檔案陣列：WLC 字典的 7 個分割檔
+          'dict-wlc-strongs': [
+              'wlc_bible_strongs_part_1.json',
+              'wlc_bible_strongs_part_2.json',
+              'wlc_bible_strongs_part_3.json',
+              'wlc_bible_strongs_part_4.json',
+              'wlc_bible_strongs_part_5.json',
+              'wlc_bible_strongs_part_6.json',
+              'wlc_bible_strongs_part_7.json'
+          ],
+          'dict-lxx-strongs': 'lxx_strongs_transliterated.json',
+          // 如果你暫時沒有 NA28 專屬字典，可先留空或借用其他檔
+          'dict-na28-strongs': '' 
+        };
+
         // --- 📴 100% 離線純原生內嵌 SVG 圖標引擎 ---
         const ICON_PATHS = {
             'search': <Fragment><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></Fragment>,
@@ -70,7 +99,9 @@
             'moon': <Fragment><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></Fragment>,
             'database': <Fragment><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></Fragment>,
             'book-open': <Fragment><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></Fragment>,
-            'settings': <Fragment><path d="M12.22 2h-.44a2 2 0 0 0-2 2l-.2.1a2 2 0 0 1-2.81.25l-.17-.1a2 2 0 0 0-2.81.14l-.31.31a2 2 0 0 0 .14 2.81l.1.17a2 2 0 0 1-.25 2.81l-.1.2a2 2 0 0 0-2 2v.44a2 2 0 0 0 2 2l.1.2a2 2 0 0 1 .25 2.81l-.1.17a2 2 0 0 0-.14 2.81l.31.31a2 2 0 0 0 2.81-.14l.17-.1a2 2 0 0 1 2.81-.25l.2.1a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2l.2-.1a2 2 0 0 1 2.81-.25l.17.1a2 2 0 0 0 2.81-.14l.31-.31a2 2 0 0 0-.14-2.81l-.1-.17a2 2 0 0 1 .25-2.81l.1-.2a2 2 0 0 0 2 2v-.44a2 2 0 0 0-2-2l-.1-.2a2 2 0 0 1-.25-2.81l.1-.17a2 2 0 0 0 .14-2.81l-.31-.31a2 2 0 0 0-2.81.14l-.17.1a2 2 0 0 1-2.81.25l-.2-.1a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></Fragment>
+            'settings': <Fragment><path d="M12.22 2h-.44a2 2 0 0 0-2 2l-.2.1a2 2 0 0 1-2.81.25l-.17-.1a2 2 0 0 0-2.81.14l-.31.31a2 2 0 0 0 .14 2.81l.1.17a2 2 0 0 1-.25 2.81l-.1.2a2 2 0 0 0-2 2v.44a2 2 0 0 0 2 2l.1.2a2 2 0 0 1 .25 2.81l-.1.17a2 2 0 0 0-.14 2.81l.31.31a2 2 0 0 0 2.81-.14l.17-.1a2 2 0 0 1 2.81-.25l.2.1a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2l.2-.1a2 2 0 0 1 2.81-.25l.17.1a2 2 0 0 0 2.81-.14l.31-.31a2 2 0 0 0-.14-2.81l-.1-.17a2 2 0 0 1 .25-2.81l.1-.2a2 2 0 0 0 2-2v-.44a2 2 0 0 0-2-2l-.1-.2a2 2 0 0 1-.25-2.81l.1-.17a2 2 0 0 0 .14-2.81l-.31-.31a2 2 0 0 0-2.81.14l-.17.1a2 2 0 0 1-2.81.25l-.2-.1a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></Fragment>,
+            'cloud-download': <Fragment><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m8 17 4 4 4-4"/></Fragment>,
+            'upload': <Fragment><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></Fragment>
         };
 
         const LucideIcon = ({ name, className = '', size = 20, strokeWidth = 2, ...props }) => {
@@ -102,6 +133,8 @@
         const Moon = (p) => <LucideIcon name="moon" {...p} />;
         const Database = (p) => <LucideIcon name="database" {...p} />;
         const BookOpen = (p) => <LucideIcon name="book-open" {...p} />;
+        const CloudDownload = (p) => <LucideIcon name="cloud-download" {...p} />;
+        const Upload = (p) => <LucideIcon name="upload" {...p} />;
         const Loader = (p) => (
             <svg className={`animate-spin ${p.className || ''}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width={p.size || 20} height={p.size || 20}>
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -151,18 +184,50 @@
           ]
         };
 
-        // --- 即時音譯引擎 ---
+        // --- 智慧音譯引擎 ---
         const autoTransliterate = (text, isHebrew) => {
           if (!text) return '';
           if (isHebrew) {
-            const charMap = {'א':'’', 'ב':'b', 'ג':'g', 'ד':'d', 'ה':'h', 'ו':'v', 'ז':'z', 'ח':'ch', 'ט':'t', 'י':'y', 'כ':'k', 'ך':'k', 'ל':'l', 'מ':'m', 'ם':'m', 'נ':'n', 'ן':'n', 'ס':'s', 'ע':'‘', 'פ':'p', 'ף':'p', 'צ':'ts', 'ץ':'ts', 'ק':'q', 'ר':'r', 'ש':'sh', 'ת':'t'};
-            const vowelMap = {'\u05B0':'e', '\u05B1':'e', '\u05B2':'a', '\u05B3':'o', '\u05B4':'i', '\u05B5':'e', '\u05B6':'e', '\u05B7':'a', '\u05B8':'a', '\u05B9':'o', '\u05BB':'u'};
+            let t = text.replace(/[\u0591-\u05AF\u05C4\u05C5]/g, ''); 
+            t = t.replace(/ו\u05BC/g, 'u');
+            t = t.replace(/\u05B4\u05D9/g, 'i');
+            t = t.replace(/\u05B5\u05D9/g, 'e');
+            t = t.replace(/\u05B6\u05D9/g, 'e');
+            t = t.replace(/\u05B9\u05D5/g, 'o');
+            t = t.replace(/\u05B8\u05D4(?:$|[^\u0590-\u05FF])/g, 'ah');
+            t = t.replace(/\u05B7\u05D4(?:$|[^\u0590-\u05FF])/g, 'ah');
+            t = t.replace(/א/g, '');
+
+            const basicMap = {
+                'ג':'g', 'ד':'d', 'ה':'h', 'ו':'v', 'ז':'z', 'ח':'ch', 'ט':'t', 'י':'y', 
+                'ל':'l', 'מ':'m', 'ם':'m', 'נ':'n', 'ן':'n', 'ס':'s', 'ע':'‘', 'צ':'ts', 
+                'ץ':'ts', 'ק':'q', 'ר':'r', 'ת':'t',
+                '\u05B0':'e', '\u05B1':'e', '\u05B2':'a', '\u05B3':'o', '\u05B4':'i', 
+                '\u05B5':'e', '\u05B6':'e', '\u05B7':'a', '\u05B8':'a', '\u05B9':'o', 
+                '\u05BB':'u'
+            };
+
             let res = '';
-            for(let char of text) { if(charMap[char]) res += charMap[char]; else if(vowelMap[char]) res += vowelMap[char]; }
+            for (let i = 0; i < t.length; i++) {
+                let char = t[i];
+                let lookahead = t.substring(i + 1, i + 3);
+                let hasDagesh = lookahead.includes('\u05BC');
+
+                if (char === 'ב') { res += hasDagesh ? 'b' : 'v'; }
+                else if (char === 'פ' || char === 'ף') { res += hasDagesh ? 'p' : 'f'; }
+                else if (char === 'כ' || char === 'ך') { res += hasDagesh ? 'k' : 'ch'; }
+                else if (char === 'ש') { res += lookahead.includes('\u05C2') ? 's' : 'sh'; }
+                else if (basicMap[char]) { res += basicMap[char]; }
+                else if (/[a-zA-Z‘]/.test(char)) { res += char; } 
+            }
+            if (res.length > 0) res = res.charAt(0).toUpperCase() + res.slice(1);
             return res || '-';
+            
           } else {
             const charMap = {'α':'a', 'β':'b', 'γ':'g', 'δ':'d', 'ε':'e', 'ζ':'z', 'η':'ē', 'θ':'th', 'ι':'i', 'κ':'k', 'λ':'l', 'μ':'m', 'ν':'n', 'ξ':'x', 'ο':'o', 'π':'p', 'ρ':'r', 'σ':'s', 'ς':'s', 'τ':'t', 'υ':'y', 'φ':'ph', 'χ':'ch', 'ψ':'ps', 'ω':'ō'};
-            return text.toLowerCase().normalize("NFD").split('').map(c => charMap[c] || c).join('').replace(/[\u0300-\u036f]/g, "").replace(/[^a-zōē\s]/g, '');
+            let res = text.toLowerCase().normalize("NFD").split('').map(c => charMap[c] || c).join('').replace(/[\u0300-\u036f]/g, "").replace(/[^a-zōē\s]/g, '');
+            if (res.length > 0) res = res.charAt(0).toUpperCase() + res.slice(1);
+            return res;
           }
         };
 
@@ -365,13 +430,9 @@
               return () => window.removeEventListener('resize', handleResize);
           }, [appReady]);
 
-          // 觸控拖拽事件處理函數組
           const handlePointerDown = (e) => {
               setIsDragging(true);
-              dragStart.current = {
-                  x: e.clientX - currentPos.current.x,
-                  y: e.clientY - currentPos.current.y
-              };
+              dragStart.current = { x: e.clientX - currentPos.current.x, y: e.clientY - currentPos.current.y };
               e.currentTarget.setPointerCapture(e.pointerId);
           };
 
@@ -379,20 +440,14 @@
               if (!isDragging) return;
               let newX = e.clientX - dragStart.current.x;
               let newY = e.clientY - dragStart.current.y;
-
-              // 安全邊界裁切（防止艙體飛出屏幕外）
-              const capsuleWidth = 48;
-              const capsuleHeight = 118;
+              const capsuleWidth = 48; const capsuleHeight = 118;
               newX = Math.max(8, Math.min(window.innerWidth - capsuleWidth - 8, newX));
-              newY = Math.max(8, Math.min(window.innerHeight - capsuleHeight - 140, newY)); // 高度預留 140px 避開 Navigation bar
-
+              newY = Math.max(8, Math.min(window.innerHeight - capsuleHeight - 140, newY)); 
               setFloatPos({ x: newX, y: newY });
               currentPos.current = { x: newX, y: newY };
           };
 
-          const handlePointerUp = () => {
-              setIsDragging(false);
-          };
+          const handlePointerUp = () => { setIsDragging(false); };
 
           useEffect(() => {
             setSavedState('bible_dark', isDarkMode);
@@ -423,6 +478,7 @@
             setTimeout(() => setToastMsg(''), 2000);
           };
 
+          // --- 跨書卷導航 ---
           const handleNextChapter = () => {
               const ALL_BOOKS = [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT];
               const currentIndex = ALL_BOOKS.findIndex(b => b.id === viewState.bookId);
@@ -545,6 +601,56 @@
               setBibleSearchResults(matchResults);
           };
 
+          // --- 雲端一鍵下載 ---
+          const fetchCloudData = async () => {
+            const fileOrFiles = CLOUD_FILES[importTarget];
+            if (!fileOrFiles) {
+                setToastMsg('❌ 找不到對應的雲端檔案名稱設定');
+                return;
+            }
+            
+            try {
+                setImporting(true);
+                let mergedData = {};
+                
+                // 如果是陣列 (多分割檔，如 WLC 字典)
+                if (Array.isArray(fileOrFiles)) {
+                    setToastMsg(`⏳ 正在下載 ${importTarget.toUpperCase()} (共 ${fileOrFiles.length} 個分割檔)...`);
+                    for (let i = 0; i < fileOrFiles.length; i++) {
+                        const url = `${GITHUB_BASE_URL}/${fileOrFiles[i]}`;
+                        setToastMsg(`⏳ 下載進度：${i + 1}/${fileOrFiles.length}...`);
+                        const response = await fetch(url);
+                        if (!response.ok) throw new Error(`檔案 ${fileOrFiles[i]} 請求失敗`);
+                        const json = await response.json();
+                        // 將每個檔案的內容合併到同一個物件
+                        Object.assign(mergedData, normalizeBibleData(json));
+                    }
+                } else {
+                    // 單一檔案下載
+                    setToastMsg(`⏳ 正在從 GitHub 下載 ${importTarget.toUpperCase()}...`);
+                    const url = `${GITHUB_BASE_URL}/${fileOrFiles}`;
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('網絡請求失敗');
+                    const json = await response.json();
+                    mergedData = normalizeBibleData(json);
+                }
+
+                if (Object.keys(mergedData).length > 0) {
+                  await saveToDB(importTarget, mergedData);
+                  setLoadedBibles(prev => ({ ...prev, [importTarget]: mergedData }));
+                  setToastMsg(`✅ ${importTarget.toUpperCase()} 下載並儲存成功！`);
+                } else {
+                  setToastMsg(`❌ 解析失敗：無法識別結構`);
+                }
+            } catch (err) {
+                console.error("下載錯誤:", err);
+                setToastMsg(`❌ 下載失敗：請檢查 GitHub 是否有上傳該檔案`);
+            } finally {
+                setImporting(false);
+                setTimeout(() => setToastMsg(''), 3000);
+            }
+          };
+
           const handleFileUpload = (e) => {
             const file = e.target.files[0]; if (!file) return;
             setImporting(true); const reader = new FileReader();
@@ -563,13 +669,26 @@
             reader.readAsText(file);
           };
 
+          // --- 智慧字典搜尋 ---
           const executeDictSearch = (query, currentDictId) => {
               const q = query.trim().toLowerCase(); if (!q || !loadedBibles[currentDictId]) return [];
               const results = []; const dict = loadedBibles[currentDictId];
               for (const [strongs, data] of Object.entries(dict)) {
-                  if (strongs.toLowerCase() === q || (data.lemma && data.lemma.toLowerCase().includes(q)) || (data.strongs_definition && data.strongs_definition.toLowerCase().includes(q))) { results.push({ strongs, ...data }); }
-                  if (results.length >= 15) break; 
+                  const lemma = data.lemma ? data.lemma.toLowerCase() : '';
+                  if (
+                      strongs.toLowerCase() === q ||
+                      (lemma && lemma === q) ||
+                      (lemma && lemma.length >= 3 && q.includes(lemma)) ||
+                      (data.strongs_definition && data.strongs_definition.toLowerCase().includes(q))
+                  ) { results.push({ strongs, ...data }); }
+                  if (results.length >= 20) break; 
               }
+              results.sort((a, b) => {
+                  const aLemma = a.lemma ? a.lemma.toLowerCase() : '';
+                  const bLemma = b.lemma ? b.lemma.toLowerCase() : '';
+                  if (aLemma === q) return -1; if (bLemma === q) return 1;
+                  return 0;
+              });
               return results;
           };
 
@@ -701,7 +820,17 @@
                                              </div>
                                              <span className="text-[10px] font-black bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-500">{r.strongs}</span>
                                           </div>
+                                          
+                                          {/* 文法/詞性標籤 */}
+                                          {(r.part_of_speech || r.pos || r.grammar || r.morphology || r.morph || r.derivation) && (
+                                             <div className="flex flex-wrap gap-1.5 mb-2.5">
+                                                {(r.part_of_speech || r.pos) && <span className="text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-800/50">詞性: {r.part_of_speech || r.pos}</span>}
+                                                {(r.grammar || r.morphology || r.morph) && <span className="text-[10px] font-bold bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-800/50">文法: {r.grammar || r.morphology || r.morph}</span>}
+                                             </div>
+                                          )}
+
                                           <p className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed"><span className="text-slate-400 font-normal mr-1">定義:</span> {r.strongs_definition}</p>
+                                          {r.kjv_definition && <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mt-1"><span className="font-normal mr-1">KJV:</span> {r.kjv_definition}</p>}
                                        </div>
                                    ))}
                                 </div>
@@ -1022,8 +1151,9 @@
                                 ))}
                              </div>
 
+                             {/* ☁️ 雲端一鍵下載區塊 */}
                              <div className="flex flex-col gap-3 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/50 rounded-xl">
-                                <select value={importTarget} onChange={e => setImportTarget(e.target.value)} className="p-2.5 rounded-lg text-sm font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none text-indigo-700 dark:text-indigo-300">
+                                <select value={importTarget} onChange={e => setImportTarget(e.target.value)} className="p-3 rounded-lg text-sm font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none text-indigo-700 dark:text-indigo-300">
                                    <option value="zh-cuv">匯入為：和合本 (CUV)</option>
                                    <option value="zh-lzz">匯入為：呂振中 (LZZ)</option>
                                    <option value="zh-ncv">匯入為：新譯本 (CNV/NCV)</option>
@@ -1037,14 +1167,27 @@
                                    <option value="dict-lxx-strongs">匯入為：LXX Strongs 字典 (七十士譯本)</option>
                                    <option value="dict-na28-strongs">匯入為：NA28 Strongs 字典 (新約希臘文)</option>
                                 </select>
-                                <div className="relative">
-                                   <input type="file" accept=".json" onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                                   <div className="w-full flex items-center justify-center gap-2 p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-black text-sm cursor-pointer">
-                                      {importing ? <Loader size={16} /> : <Book className="w-4 h-4" />}
-                                      {importing ? '解析並儲存中...' : '選擇 JSON 檔案並匯入'}
+                                
+                                <div className="flex gap-2">
+                                   <button 
+                                     onClick={fetchCloudData}
+                                     disabled={importing}
+                                     className="flex-1 flex justify-center items-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-black text-sm hover:bg-indigo-700 transition-colors disabled:opacity-50 active:scale-95"
+                                   >
+                                     {importing ? <Loader className="w-4 h-4 animate-spin" /> : <CloudDownload className="w-4 h-4" />}
+                                     {importing ? '下載中...' : '從 GitHub 雲端下載'}
+                                   </button>
+                                   
+                                   {/* 手動上傳作為後備 */}
+                                   <div className="relative flex-1">
+                                      <input type="file" accept=".json" onChange={handleFileUpload} disabled={importing} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed" />
+                                      <div className={`w-full h-full flex items-center justify-center gap-2 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl font-black text-sm transition-colors ${importing ? 'opacity-50' : 'hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer active:scale-95'}`}>
+                                         <Upload className="w-4 h-4" /> 本地上傳
+                                      </div>
                                    </div>
                                 </div>
                              </div>
+
                              <button onClick={async () => { if(window.confirm('警告：這將會清除您手機中的「所有」聖經與字典數據！確定要繼續嗎？')) { await clearDB(); setLoadedBibles({}); setToastMsg('整個資料庫已重置清空'); } }} className="mt-6 w-full py-3 text-xs font-bold text-red-500 hover:text-red-600 bg-red-50 dark:bg-red-900/20 rounded-xl transition-colors">
                                 清除所有已匯入資料 (重置資料庫)
                              </button>
