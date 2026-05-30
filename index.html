@@ -221,6 +221,13 @@
           }
         };
 
+        // --- 去除重音與母音的輔助函數 (用於模糊檢索) ---
+        const removeDiacritics = (str) => {
+            if (!str) return '';
+            // 移除希臘文變音符號 \u0300-\u036f，希伯來文母音與標點 \u0591-\u05C7
+            return str.normalize("NFD").replace(/[\u0300-\u036f\u0591-\u05C7]/g, "").toLowerCase();
+        };
+
         // --- IndexedDB 控制 ---
         const DB_NAME = 'BibleManuscriptDB';
         const STORE_NAME = 'bibles';
@@ -281,33 +288,29 @@
           });
         };
 
-        // --- JSON 解析正規化 (修正字典解析引擎) ---
+        // --- JSON 解析正規化 ---
         const normalizeBibleData = (rawJson) => {
             const result = {}; 
             
-            // 1. 判斷是否為字典檔案 (陣列格式，例如 [ {strongs: "G1", lemma: "..."} ])
             if (Array.isArray(rawJson) && rawJson.length > 0 && (rawJson[0].strongs || rawJson[0].lemma || rawJson[0].definition || rawJson[0].gloss)) {
                 const dictObj = {};
                 rawJson.forEach(item => {
                     const key = item.strongs || item.lemma || item.id;
                     if (key) dictObj[key] = item;
                 });
-                return dictObj; // 轉換為物件格式並返回
+                return dictObj;
             }
 
-            // 2. 判斷是否為字典檔案 (傳統物件格式，例如 { "H1": { strongs: "H1", ... } })
             if (rawJson && typeof rawJson === 'object' && !Array.isArray(rawJson)) {
                 const keys = Object.keys(rawJson);
                 if (keys.length > 0) {
                     const firstVal = rawJson[keys[0]];
-                    // 只要 Key 是 G/H 開頭，或者內部含有 lemma / strongs 屬性，就視為字典
                     if (/^[GH]\d+/i.test(keys[0]) || (firstVal && (firstVal.strongs || firstVal.lemma || firstVal.definition || firstVal.gloss))) {
                         return rawJson;
                     }
                 }
             }
 
-            // 3. 聖經解析邏輯
             const allBooks = [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT];
             const bookMap = {};
             allBooks.forEach(b => {
@@ -429,8 +432,8 @@
           useEffect(() => {
               const handleResize = () => {
                   if (!isDragging) {
-                      const x = window.innerWidth - 64; // 靠右 16px (控制艙寬度約 48px)
-                      const y = window.innerHeight - 280; // 避開底部導航列
+                      const x = window.innerWidth - 64; 
+                      const y = window.innerHeight - 280; 
                       setFloatPos({ x, y });
                       currentPos.current = { x, y };
                   }
@@ -623,7 +626,6 @@
                 setImporting(true);
                 let mergedData = {};
                 
-                // 如果是陣列 (多分割檔，如 WLC 字典)
                 if (Array.isArray(fileOrFiles)) {
                     setToastMsg(`⏳ 正在下載 ${importTarget.toUpperCase()} (共 ${fileOrFiles.length} 個分割檔)...`);
                     for (let i = 0; i < fileOrFiles.length; i++) {
@@ -632,11 +634,9 @@
                         const response = await fetch(url);
                         if (!response.ok) throw new Error(`檔案 ${fileOrFiles[i]} 請求失敗`);
                         const json = await response.json();
-                        // 將每個檔案的內容合併到同一個物件
                         Object.assign(mergedData, normalizeBibleData(json));
                     }
                 } else {
-                    // 單一檔案下載
                     setToastMsg(`⏳ 正在從 GitHub 下載 ${importTarget.toUpperCase()}...`);
                     const url = `${GITHUB_BASE_URL}/${fileOrFiles}`;
                     const response = await fetch(url);
@@ -679,38 +679,96 @@
             reader.readAsText(file);
           };
 
-          // --- 智慧字典搜尋 ---
+          // --- 🧠 智慧詞根模糊檢索引擎 (Fuzzy Stem Matcher) ---
           const executeDictSearch = (query, currentDictId) => {
-              const q = query.trim().toLowerCase(); if (!q || !loadedBibles[currentDictId]) return [];
-              const results = []; const dict = loadedBibles[currentDictId];
+              const qRaw = query.trim().toLowerCase(); 
+              if (!qRaw || !loadedBibles[currentDictId]) return [];
+              
+              // 扒掉所有重音與母音 (將 θεοῦ 變為 θεου)
+              const qClean = removeDiacritics(qRaw);
+
+              const results = []; 
+              const dict = loadedBibles[currentDictId];
+              
               for (const [key, data] of Object.entries(dict)) {
-                  const strongs = data.strongs || key;
-                  const lemma = data.lemma ? data.lemma.toLowerCase() : '';
+                  const strongs = String(data.strongs || key).toLowerCase();
+                  const lemmaRaw = data.lemma ? data.lemma.toLowerCase() : '';
+                  const lemmaClean = removeDiacritics(lemmaRaw);
+                  
                   const strongDef = data.strongs_definition ? data.strongs_definition.toLowerCase() : '';
                   const htmlDef = data.definition ? data.definition.toLowerCase() : '';
                   const gloss = data.gloss ? data.gloss.toLowerCase() : '';
                   
-                  if (
-                      strongs.toLowerCase() === q ||
-                      (lemma && lemma === q) ||
-                      (lemma && lemma.length >= 3 && q.includes(lemma)) ||
-                      strongDef.includes(q) ||
-                      htmlDef.includes(q) ||
-                      gloss.includes(q)
-                  ) { results.push({ ...data, strongs }); }
-                  if (results.length >= 20) break; 
+                  // 1. 完全精準命中 (最高優先級)
+                  if (strongs === qRaw || lemmaRaw === qRaw || lemmaClean === qClean || gloss === qRaw) {
+                      results.unshift({ ...data, strongs, score: 100 }); 
+                      continue;
+                  }
+
+                  let score = 0;
+
+                  // 2. 智慧前綴/後綴穿透 (例如: 穿透希伯來文介系詞 בְּ，或比對希臘文詞幹 θεο)
+                  if (qClean.length >= 2 && lemmaClean.length >= 2) {
+                      // Substring 命中 (處理希伯來文附加字首，如 查詢包含字根)
+                      if (lemmaClean.length >= 3 && qClean.includes(lemmaClean)) {
+                          score += 60;
+                      } else if (qClean.length >= 3 && lemmaClean.includes(qClean)) {
+                          score += 60;
+                      } else {
+                          // Prefix 命中 (處理希臘文附加字尾變化)
+                          let commonLen = 0;
+                          while (commonLen < qClean.length && commonLen < lemmaClean.length && qClean[commonLen] === lemmaClean[commonLen]) {
+                              commonLen++;
+                          }
+                          // 只要有 3 個字母的字根相同 (例如 θεο)，就高度懷疑是變形字
+                          if (commonLen >= 3) {
+                              score += 50;
+                          } else if (commonLen === 2 && (qClean.length <= 3 || lemmaClean.length <= 3)) {
+                              // 超短字詞的 2 字母判定
+                              score += 40;
+                          }
+                      }
+                  }
+
+                  // 3. 內文包含檢索
+                  if (strongDef.includes(qRaw) || htmlDef.includes(qRaw) || gloss.includes(qRaw)) {
+                      score += 30;
+                  }
+
+                  // 若有分數，推入結果
+                  if (score > 0) {
+                      results.push({ ...data, strongs, score });
+                  }
               }
+
+              // 排序：分數高的在前；分數相同時，長度越接近查詢字的越前面
               results.sort((a, b) => {
-                  const aLemma = a.lemma ? a.lemma.toLowerCase() : '';
-                  const bLemma = b.lemma ? b.lemma.toLowerCase() : '';
-                  if (aLemma === q) return -1; if (bLemma === q) return 1;
-                  return 0;
+                  if (b.score !== a.score) return b.score - a.score;
+                  const aLenDiff = Math.abs((a.lemma || '').length - qRaw.length);
+                  const bLenDiff = Math.abs((b.lemma || '').length - qRaw.length);
+                  return aLenDiff - bLenDiff;
               });
-              return results;
+
+              // 去除重複的 Strongs 條目，只取前 30 筆
+              const uniqueResults = [];
+              const seenStrongs = new Set();
+              for (const r of results) {
+                  if (!seenStrongs.has(r.strongs)) {
+                      seenStrongs.add(r.strongs);
+                      uniqueResults.push(r);
+                      if (uniqueResults.length >= 30) break;
+                  }
+              }
+              return uniqueResults;
           };
 
           const handleWordClick = (word, versionConfig) => {
-            const clean = word.replace(/[.,;·׃]/g, '').trim();
+            // 強化清洗：扒掉字詞前後所有的標點符號與括號
+            const clean = word.replace(/[.,;·׃!?()[\]{}"']/g, '').trim();
+            
+            // 防止點到佔位符引發錯誤
+            if (!clean || clean === '尚未匯入' || clean.includes('尚未')) return;
+
             let activeDict = 'dict-wlc-strongs';
             if (versionConfig === 'orig-lxx') activeDict = 'dict-lxx-strongs';
             if (versionConfig === 'orig-na28') activeDict = 'dict-na28-strongs';
@@ -825,7 +883,9 @@
                                     <Database className="w-8 h-8 mb-3 opacity-50" />請先在「設定」頁面匯入<br/>該字典檔案。
                                 </div>
                             ) : dictResults.length === 0 ? (
-                                <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs font-bold text-center">找不到相符的字詞。</div>
+                                <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs font-bold text-center">
+                                    找不到相符的字詞。<br/><span className="text-[10px] font-normal mt-2 opacity-70">原文字詞變化太多，建議縮短搜尋字串。</span>
+                                </div>
                             ) : (
                                 <div className="space-y-3">
                                    {dictResults.map((r, i) => (
@@ -883,7 +943,7 @@
                                   <optgroup label="中文"><option value="zh-cuv">和合本 (CUV)</option><option value="zh-lzz">呂振中 (LZZ)</option><option value="zh-ncv">新譯本 (NCV)</option></optgroup>
                                   <optgroup label="英文"><option value="en-niv">NIV</option><option value="en-nasb">NASB</option><option value="en-kjv">KJV</option></optgroup>
                                   <optgroup label="原文"><option value="orig-wlc">WLC 希伯來</option><option value="orig-lxx">LXX 七十士</option><option value="orig-na28">NA28 新約</option></optgroup>
-                               </select>
+                                </select>
                                <ChevronDown className="w-3 h-3 text-indigo-400 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none" />
                             </div>
                          </Fragment>
@@ -1145,7 +1205,6 @@
                                   { id: 'zh-cuv', label: '和合本 (CUV)' }, { id: 'zh-lzz', label: '呂振中 (LZZ)' }, { id: 'zh-ncv', label: '新譯本 (NCV)' },
                                   { id: 'en-niv', label: 'NIV' }, { id: 'en-nasb', label: 'NASB' }, { id: 'en-kjv', label: 'KJV' },
                                   { id: 'orig-wlc', label: 'WLC 原文 (希伯來文)' }, { id: 'orig-lxx', label: 'LXX 譯本 (希臘文)' }, { id: 'orig-na28', label: 'NA28 新約 (希臘文)' },
-                                  // 將字典名稱與檔名對齊，並刪除 Strongs 以免混淆
                                   { id: 'dict-wlc-strongs', label: 'WLC 希伯來字典 (wlc_hebrew_dictionary.json)' },
                                   { id: 'dict-lxx-strongs', label: 'LXX 七十士字典 (lxx_dictionary.json)' },
                                   { id: 'dict-na28-strongs', label: 'NA28 新約字典 (na28_dictionary.json)' }
@@ -1183,7 +1242,6 @@
                                    <option value="orig-wlc">匯入為：WLC 原文 (希伯來文)</option>
                                    <option value="orig-lxx">匯入為：LXX 七十士譯本 (希臘文)</option>
                                    <option value="orig-na28">匯入為：NA28 新約原文 (希臘文)</option>
-                                   {/* 更新選單顯示 */}
                                    <option value="dict-wlc-strongs">匯入為：WLC 希伯來字典 (wlc_hebrew_dictionary.json)</option>
                                    <option value="dict-lxx-strongs">匯入為：LXX 七十士字典 (lxx_dictionary.json)</option>
                                    <option value="dict-na28-strongs">匯入為：NA28 新約字典 (na28_dictionary.json)</option>
