@@ -281,13 +281,33 @@
           });
         };
 
-        // --- JSON 解析正規化 ---
+        // --- JSON 解析正規化 (修正字典解析引擎) ---
         const normalizeBibleData = (rawJson) => {
             const result = {}; 
+            
+            // 1. 判斷是否為字典檔案 (陣列格式，例如 [ {strongs: "G1", lemma: "..."} ])
+            if (Array.isArray(rawJson) && rawJson.length > 0 && (rawJson[0].strongs || rawJson[0].lemma || rawJson[0].definition || rawJson[0].gloss)) {
+                const dictObj = {};
+                rawJson.forEach(item => {
+                    const key = item.strongs || item.lemma || item.id;
+                    if (key) dictObj[key] = item;
+                });
+                return dictObj; // 轉換為物件格式並返回
+            }
+
+            // 2. 判斷是否為字典檔案 (傳統物件格式，例如 { "H1": { strongs: "H1", ... } })
             if (rawJson && typeof rawJson === 'object' && !Array.isArray(rawJson)) {
                 const keys = Object.keys(rawJson);
-                if (keys.length > 0 && /^[GH]\d+/.test(keys[0])) return rawJson;
+                if (keys.length > 0) {
+                    const firstVal = rawJson[keys[0]];
+                    // 只要 Key 是 G/H 開頭，或者內部含有 lemma / strongs 屬性，就視為字典
+                    if (/^[GH]\d+/i.test(keys[0]) || (firstVal && (firstVal.strongs || firstVal.lemma || firstVal.definition || firstVal.gloss))) {
+                        return rawJson;
+                    }
+                }
             }
+
+            // 3. 聖經解析邏輯
             const allBooks = [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT];
             const bookMap = {};
             allBooks.forEach(b => {
@@ -630,7 +650,7 @@
                   setLoadedBibles(prev => ({ ...prev, [importTarget]: mergedData }));
                   setToastMsg(`✅ ${importTarget.toUpperCase()} 下載並儲存成功！`);
                 } else {
-                  setToastMsg(`❌ 解析失敗：無法識別結構`);
+                  setToastMsg(`❌ 解析失敗：無法識別結構 (請檢查檔案格式是否正確)`);
                 }
             } catch (err) {
                 console.error("下載錯誤:", err);
@@ -652,7 +672,7 @@
                       try { await saveToDB(importTarget, normalized); } catch (de) { throw new Error(`資料庫權限出錯 (${de.message || de})`); }
                       setLoadedBibles(prev => ({ ...prev, [importTarget]: normalized }));
                       setToastMsg(`✅ ${importTarget.toUpperCase()} 匯入成功`);
-                    } else { setToastMsg('❌ 格式不支援'); }
+                    } else { setToastMsg('❌ 格式不支援或解析失敗'); }
                 } catch (err) { setToastMsg(`❌ ${err.message}`); }
                 setImporting(false); e.target.value = '';
             };
@@ -783,12 +803,12 @@
                    <div className="bg-white dark:bg-slate-900 w-full max-w-lg h-[80vh] sm:h-auto sm:max-h-[85vh] rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800 animate-in slide-in-from-bottom-4">
                       <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
                          <h3 className="font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                            <BookOpen className="w-5 h-5 text-indigo-500" /> Strong's 字典搜尋
+                            <BookOpen className="w-5 h-5 text-indigo-500" /> 字典搜尋
                          </h3>
                          <select value={dictTarget} onChange={e => { setDictTarget(e.target.value); setDictResults(executeDictSearch(dictQuery, e.target.value)); }} className="text-[11px] font-black bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 outline-none text-indigo-600 dark:text-indigo-400 cursor-pointer">
-                            <option value="dict-wlc-strongs">WLC 希伯來</option>
-                            <option value="dict-lxx-strongs">LXX 七十士</option>
-                            <option value="dict-na28-strongs">NA28 新約希臘</option>
+                            <option value="dict-wlc-strongs">WLC 希伯來字典</option>
+                            <option value="dict-lxx-strongs">LXX 七十士字典</option>
+                            <option value="dict-na28-strongs">NA28 新約字典</option>
                          </select>
                          <button onClick={() => setDictOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
                             <X className="w-4 h-4"/>
@@ -802,7 +822,7 @@
                          <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 p-3 no-scrollbar">
                             {!loadedBibles[dictTarget] ? (
                                 <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs font-bold text-center px-4">
-                                    <Database className="w-8 h-8 mb-3 opacity-50" />請先在「設定」頁面匯入<br/>[{dictTarget.replace('dict-', '').toUpperCase()}] 字典檔案。
+                                    <Database className="w-8 h-8 mb-3 opacity-50" />請先在「設定」頁面匯入<br/>該字典檔案。
                                 </div>
                             ) : dictResults.length === 0 ? (
                                 <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs font-bold text-center">找不到相符的字詞。</div>
@@ -1125,9 +1145,10 @@
                                   { id: 'zh-cuv', label: '和合本 (CUV)' }, { id: 'zh-lzz', label: '呂振中 (LZZ)' }, { id: 'zh-ncv', label: '新譯本 (NCV)' },
                                   { id: 'en-niv', label: 'NIV' }, { id: 'en-nasb', label: 'NASB' }, { id: 'en-kjv', label: 'KJV' },
                                   { id: 'orig-wlc', label: 'WLC 原文 (希伯來文)' }, { id: 'orig-lxx', label: 'LXX 譯本 (希臘文)' }, { id: 'orig-na28', label: 'NA28 新約 (希臘文)' },
-                                  { id: 'dict-wlc-strongs', label: 'WLC Strongs 字典 (希伯來)' },
-                                  { id: 'dict-lxx-strongs', label: 'LXX Strongs 字典 (七十士)' },
-                                  { id: 'dict-na28-strongs', label: 'NA28 Strongs 字典 (新約希臘)' }
+                                  // 將字典名稱與檔名對齊，並刪除 Strongs 以免混淆
+                                  { id: 'dict-wlc-strongs', label: 'WLC 希伯來字典 (wlc_hebrew_dictionary.json)' },
+                                  { id: 'dict-lxx-strongs', label: 'LXX 七十士字典 (lxx_dictionary.json)' },
+                                  { id: 'dict-na28-strongs', label: 'NA28 新約字典 (na28_dictionary.json)' }
                                 ].map(ver => (
                                    <div key={ver.id} className="flex justify-between items-center text-xs p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 transition-colors">
                                       <span className="font-bold text-slate-700 dark:text-slate-300 text-[11px]">{ver.label}</span>
@@ -1162,9 +1183,10 @@
                                    <option value="orig-wlc">匯入為：WLC 原文 (希伯來文)</option>
                                    <option value="orig-lxx">匯入為：LXX 七十士譯本 (希臘文)</option>
                                    <option value="orig-na28">匯入為：NA28 新約原文 (希臘文)</option>
-                                   <option value="dict-wlc-strongs">匯入為：WLC Strongs 字典 (希伯來文)</option>
-                                   <option value="dict-lxx-strongs">匯入為：LXX Strongs 字典 (七十士譯本)</option>
-                                   <option value="dict-na28-strongs">匯入為：NA28 Strongs 字典 (新約希臘文)</option>
+                                   {/* 更新選單顯示 */}
+                                   <option value="dict-wlc-strongs">匯入為：WLC 希伯來字典 (wlc_hebrew_dictionary.json)</option>
+                                   <option value="dict-lxx-strongs">匯入為：LXX 七十士字典 (lxx_dictionary.json)</option>
+                                   <option value="dict-na28-strongs">匯入為：NA28 新約字典 (na28_dictionary.json)</option>
                                 </select>
                                 
                                 <div className="flex gap-2">
