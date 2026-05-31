@@ -614,7 +614,7 @@
               setBibleSearchResults(matchResults);
           };
 
-          // --- 雲端一鍵下載 ---
+          // --- ☁️ 雲端一鍵下載 ---
           const fetchCloudData = async () => {
             const fileOrFiles = CLOUD_FILES[importTarget];
             if (!fileOrFiles) {
@@ -682,13 +682,31 @@
           // --- 🧠 智慧詞根模糊檢索引擎 (Fuzzy Stem Matcher) ---
           const executeDictSearch = (query, currentDictId) => {
               const qRaw = query.trim().toLowerCase(); 
-              if (!qRaw || !loadedBibles[currentDictId]) return [];
+              if (!qRaw) return [];
               
-              // 扒掉所有重音與母音 (將 θεοῦ 變為 θεου)
+              // 扒掉所有重音與母音
               const qClean = removeDiacritics(qRaw);
+
+              // 🛑 特殊情況攔截：希伯來文馬所拉文本的段落標記與特殊符號
+              if (qClean === 'פ') {
+                  return [{ strongs: '標記', lemma: 'פ (Petuhah)', gloss: '開放段落標記 (Open Paragraph)', strongs_definition: '馬所拉文本中的段落標記，表示一個新的大段落或主題。它不是一個單字，因此沒有編號。' }];
+              }
+              if (qClean === 'ס') {
+                  return [{ strongs: '標記', lemma: 'ס (Setumah)', gloss: '封閉段落標記 (Closed Paragraph)', strongs_definition: '馬所拉文本中的段落標記，表示段落內的較小停頓。它不是一個單字，因此沒有編號。' }];
+              }
+              if (qClean === '׀' || qRaw === '׀') {
+                  return [{ strongs: '標記', lemma: '׀ (Paseq)', gloss: '分隔符號 (Divider)', strongs_definition: '文本中的垂直分隔線，用於引導朗讀暫停或分開容易混淆的單字。' }];
+              }
+
+              if (!loadedBibles[currentDictId]) return [];
 
               const results = []; 
               const dict = loadedBibles[currentDictId];
+              const isHebrewDict = currentDictId.includes('wlc');
+
+              // 🛡️ 希伯來文專用：提取強子音 (去除弱字母 א, ה, ו, י)，這對還原字根極度有效
+              const getStrongConsonants = (str) => str.replace(/[אהוי]/g, '');
+              const qStrong = isHebrewDict ? getStrongConsonants(qClean) : '';
               
               for (const [key, data] of Object.entries(dict)) {
                   const strongs = String(data.strongs || key).toLowerCase();
@@ -707,32 +725,44 @@
 
                   let score = 0;
 
-                  // 2. 智慧前綴/後綴穿透 (例如: 穿透希伯來文介系詞 בְּ，或比對希臘文詞幹 θεο)
+                  // 2. 智慧前綴/後綴穿透
                   if (qClean.length >= 2 && lemmaClean.length >= 2) {
-                      // Substring 命中 (處理希伯來文附加字首，如 查詢包含字根)
                       if (lemmaClean.length >= 3 && qClean.includes(lemmaClean)) {
                           score += 60;
                       } else if (qClean.length >= 3 && lemmaClean.includes(qClean)) {
                           score += 60;
                       } else {
-                          // Prefix 命中 (處理希臘文附加字尾變化)
                           let commonLen = 0;
                           while (commonLen < qClean.length && commonLen < lemmaClean.length && qClean[commonLen] === lemmaClean[commonLen]) {
                               commonLen++;
                           }
-                          // 只要有 3 個字母的字根相同 (例如 θεο)，就高度懷疑是變形字
                           if (commonLen >= 3) {
                               score += 50;
                           } else if (commonLen === 2 && (qClean.length <= 3 || lemmaClean.length <= 3)) {
-                              // 超短字詞的 2 字母判定
                               score += 40;
                           }
                       }
                   }
 
-                  // 3. 內文包含檢索
-                  if (strongDef.includes(qRaw) || htmlDef.includes(qRaw) || gloss.includes(qRaw)) {
-                      score += 30;
+                  // 3. 🛡️ 希伯來文專屬：「強子音 (Root/Stem) 比對引擎」
+                  // 專門對付如 וַיַּ֣עַשׂ (wayya'as) 這種因為首尾弱字母脫落/增加而找不到 עָשָׂה ('asah) 的問題
+                  if (isHebrewDict && score === 0 && qStrong.length >= 2) {
+                      const lemmaStrong = getStrongConsonants(lemmaClean);
+                      if (lemmaStrong.length >= 2) {
+                          // 如果查詢字包含字典字的強子音 (例如 q:ויעש -> עש, lemma:עשה -> עש)
+                          if (qStrong.includes(lemmaStrong)) {
+                              score += 45; 
+                          } else if (lemmaStrong.includes(qStrong)) {
+                              score += 35;
+                          }
+                      }
+                  }
+
+                  // 4. 內文包含檢索
+                  if (score === 0) {
+                      if (strongDef.includes(qRaw) || htmlDef.includes(qRaw) || gloss.includes(qRaw)) {
+                          score += 30;
+                      }
                   }
 
                   // 若有分數，推入結果
@@ -744,8 +774,8 @@
               // 排序：分數高的在前；分數相同時，長度越接近查詢字的越前面
               results.sort((a, b) => {
                   if (b.score !== a.score) return b.score - a.score;
-                  const aLenDiff = Math.abs((a.lemma || '').length - qRaw.length);
-                  const bLenDiff = Math.abs((b.lemma || '').length - qRaw.length);
+                  const aLenDiff = Math.abs((a.lemma || '').length - qClean.length);
+                  const bLenDiff = Math.abs((b.lemma || '').length - qClean.length);
                   return aLenDiff - bLenDiff;
               });
 
@@ -763,8 +793,8 @@
           };
 
           const handleWordClick = (word, versionConfig) => {
-            // 強化清洗：扒掉字詞前後所有的標點符號與括號
-            const clean = word.replace(/[.,;·׃!?()[\]{}"']/g, '').trim();
+            // 強化清洗：扒掉字詞前後所有的標點符號與括號 (特別加入希伯來文連字號 ־ )
+            const clean = word.replace(/[.,;·׃!?()[\]{}"'־]/g, '').trim();
             
             // 防止點到佔位符引發錯誤
             if (!clean || clean === '尚未匯入' || clean.includes('尚未')) return;
