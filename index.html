@@ -65,8 +65,9 @@
           'dict-wlc-strongs': 'wlc_hebrew_dictionary.json',
           'dict-lxx-strongs': 'lxx_dictionary.json',
           'dict-na28-strongs': 'na28_dictionary.json',
-          // 自動載入 13 個形態學分割檔
-          'morph-wlc': Array.from({ length: 13 }, (_, i) => `wlc_morph_part_${i + 1}.json`)
+          'morph-wlc': Array.from({ length: 13 }, (_, i) => `wlc_morph_part_${i + 1}.json`),
+          // 🆕 註冊新約 NA28 形態學資料庫 (3 個分割檔)
+          'morph-na28': ['nt_morphology_1.json', 'nt_morphology_2.json', 'nt_morphology_3.json']
         };
 
         // --- 📴 100% 離線純原生內嵌 SVG 圖標引擎 ---
@@ -349,11 +350,29 @@
             const ensurePath = (bId, ch) => { if(!result[bId]) result[bId] = {}; if(!result[bId][ch]) result[bId][ch] = {}; };
 
             try {
-                // 🆕 支援你的新格式： { "1Chr": [ { "verse": "1Chr.1.1", "words": [...] } ] }
+                // 處理 Object 格式的資料
                 if (rawJson && typeof rawJson === 'object' && !Array.isArray(rawJson)) {
-                    // 檢查第一層的 value 是否為陣列，且陣列元素包含 verse 和 words
+                    
                     const firstKey = Object.keys(rawJson)[0];
-                    if (firstKey && Array.isArray(rawJson[firstKey]) && rawJson[firstKey][0] && rawJson[firstKey][0].verse && rawJson[firstKey][0].words) {
+                    if (!firstKey) return result;
+
+                    // 🆕 支援新約 NA28 的平坦結構： { "Mat.1.1": [ { "word": "...", ... } ] }
+                    if (firstKey.includes('.') && Array.isArray(rawJson[firstKey])) {
+                        for (const refKey in rawJson) {
+                            const ref = parseVerseRef(refKey);
+                            if (ref) {
+                                const bId = getBookId(ref.bookAbbr);
+                                if (bId) {
+                                    ensurePath(bId, ref.chapter);
+                                    result[bId][ref.chapter][ref.verse] = rawJson[refKey];
+                                }
+                            }
+                        }
+                        return result;
+                    }
+
+                    // 支援舊約 WLC 的階層結構： { "1Chr": [ { "verse": "1Chr.1.1", "words": [...] } ] }
+                    if (Array.isArray(rawJson[firstKey]) && rawJson[firstKey][0] && rawJson[firstKey][0].verse && rawJson[firstKey][0].words) {
                         for (const bookKey in rawJson) {
                             const bId = getBookId(bookKey);
                             if (bId) {
@@ -361,7 +380,6 @@
                                     const ref = parseVerseRef(verseObj.verse);
                                     if (ref) {
                                         ensurePath(bId, ref.chapter);
-                                        // 儲存整個 words 陣列，這樣之後點擊單字時才能拿到完整物件
                                         result[bId][ref.chapter][ref.verse] = verseObj.words;
                                     }
                                 });
@@ -369,6 +387,21 @@
                         }
                         return result;
                     }
+
+                    // 支援常規 { "GEN": { "1": { "1": "text" } } }
+                    const root = rawJson.books || rawJson;
+                    for (let bKey in root) {
+                        if (['version', 'language', 'translation', 'count'].includes(bKey)) continue;
+                        const bId = getBookId(bKey);
+                        if (bId) {
+                            ensurePath(bId, null);
+                            for (let chKey in root[bKey]) {
+                                ensurePath(bId, chKey);
+                                for (let vKey in root[bKey][chKey]) { result[bId][chKey][vKey] = root[bKey][chKey][vKey]; }
+                            }
+                        }
+                    }
+                    return result;
                 }
 
                 if (Array.isArray(rawJson) && rawJson[0]?.chapter !== undefined) {
@@ -390,33 +423,7 @@
                   });
                   return result;
                 }
-                if (typeof rawJson === 'object' && !Array.isArray(rawJson)) {
-                    const root = rawJson.books || rawJson;
-                    if (Array.isArray(root)) {
-                        root.forEach(bookData => {
-                          const bId = getBookId(bookData.name || bookData.book);
-                          if (bId) {
-                              (bookData.chapters || []).forEach(chData => {
-                                  const ch = chData.chapter; ensurePath(bId, ch);
-                                  (chData.verses || []).forEach(vData => { result[bId][ch][vData.verse] = vData.text || vData.original || vData; });
-                              });
-                          }
-                        });
-                        return result;
-                    }
-                    for (let bKey in root) {
-                        if (['version', 'language', 'translation', 'count'].includes(bKey)) continue;
-                        const bId = getBookId(bKey);
-                        if (bId) {
-                            ensurePath(bId, null);
-                            for (let chKey in root[bKey]) {
-                                ensurePath(bId, chKey);
-                                for (let vKey in root[bKey][chKey]) { result[bId][chKey][vKey] = root[bKey][chKey][vKey]; }
-                            }
-                        }
-                    }
-                    return result;
-                }
+                
             } catch (e) { console.error("解析錯誤:", e); }
             return result;
         };
@@ -579,11 +586,12 @@
             for (let i = 1; i <= maxV; i++) {
                 let cuv = loadedBibles['zh-cuv']?.[viewState.bookId]?.[viewState.chapter]?.[i];
                 let wlc = loadedBibles['orig-wlc']?.[viewState.bookId]?.[viewState.chapter]?.[i];
+                let na28 = loadedBibles['orig-na28']?.[viewState.bookId]?.[viewState.chapter]?.[i];
                 newVerses.push({
                     verseNum: i, paragraphStart: i === 1, bookId: viewState.bookId, chapter: viewState.chapter,
                     chinese: { cuv: cuv || "", lzz: loadedBibles['zh-lzz']?.[viewState.bookId]?.[viewState.chapter]?.[i] || "", ncv: loadedBibles['zh-ncv']?.[viewState.bookId]?.[viewState.chapter]?.[i] || "" },
                     english: { niv: loadedBibles['en-niv']?.[viewState.bookId]?.[viewState.chapter]?.[i] || "", nasb: loadedBibles['en-nasb']?.[viewState.bookId]?.[viewState.chapter]?.[i] || "", kjv: loadedBibles['en-kjv']?.[viewState.bookId]?.[viewState.chapter]?.[i] || "" },
-                    original: { 'orig-wlc': wlc || "", 'orig-lxx': loadedBibles['orig-lxx']?.[viewState.bookId]?.[viewState.chapter]?.[i] || "", 'orig-na28': loadedBibles['orig-na28']?.[viewState.bookId]?.[viewState.chapter]?.[i] || "" },
+                    original: { 'orig-wlc': wlc || "", 'orig-lxx': loadedBibles['orig-lxx']?.[viewState.bookId]?.[viewState.chapter]?.[i] || "", 'orig-na28': na28 || "" },
                     isOT
                 });
             }
@@ -696,10 +704,43 @@
               let tags = [];
               const addTag = (tag) => { if (tag && !tags.includes(tag)) tags.push(tag); };
 
-              // 🆕 升級：優先處理自訂的詳細 morph_analysis 結構
+              // 🆕 升級：處理新約 NA28 的 morphology 字串 (例如 "Function=Noun; Case=Nominative;")
+              if (rawCodeOrObj && typeof rawCodeOrObj === 'object' && typeof rawCodeOrObj.morphology === 'string' && rawCodeOrObj.morphology.includes('=')) {
+                  const pairs = rawCodeOrObj.morphology.split(';').map(s => s.trim()).filter(s => s);
+                  
+                  const zhMap = {
+                      'Noun': '名詞', 'Verb': '動詞', 'Adjective': '形容詞', 'Adverb': '副詞', 
+                      'Pronoun': '代名詞', 'Preposition': '介系詞', 'Conjunction': '連接詞', 
+                      'Interjection': '感嘆詞', 'Particle': '助詞', 'Article': '冠詞', 'Determiner': '限定詞',
+                      
+                      'Nominative': '主格', 'Genitive': '屬格', 'Dative': '與格', 'Accusative': '賓格', 'Vocative': '呼格',
+                      'Singular': '單數', 'Plural': '複數',
+                      'Masculine': '陽性', 'Feminine': '陰性', 'Neuter': '中性',
+                      
+                      'Present': '現在式', 'Imperfect': '未完成式', 'Future': '未來式', 'Aorist': '簡單過去式', 'Perfect': '完成式', 'Pluperfect': '過去完成式',
+                      'Active': '主動', 'Middle': '關身', 'Passive': '被動',
+                      'Indicative': '直陳語氣', 'Imperative': '祈使語氣', 'Subjunctive': '假設語氣', 'Optative': '祈願語氣', 'Infinitive': '不定詞', 'Participle': '分詞',
+                      '1st': '第一人稱', '2nd': '第二人稱', '3rd': '第三人稱'
+                  };
+
+                  pairs.forEach(pair => {
+                      const [key, val] = pair.split('=').map(s => s.trim());
+                      if (val && zhMap[val]) {
+                          if (key === 'Function' || key === 'pos') addTag(`詞性: ${zhMap[val]}`);
+                          else if (key === 'Tense' || key === 'Mood') addTag(`語氣: ${zhMap[val]}`);
+                          else addTag(zhMap[val]);
+                      } else if (val) {
+                          addTag(val);
+                      }
+                  });
+                  
+                  if (tags.length > 0) return tags;
+              }
+
+
+              // 處理舊約 WLC 的詳細 morph_analysis 結構
               if (rawCodeOrObj && typeof rawCodeOrObj === 'object' && rawCodeOrObj.morph_analysis && rawCodeOrObj.morph_analysis.parts) {
                   rawCodeOrObj.morph_analysis.parts.forEach(part => {
-                      // 處理詞性 (pos)
                       const posMap = {
                           'noun': '名詞', 'verb': '動詞', 'adjective': '形容詞', 'adverb': '副詞', 
                           'pronoun': '代名詞', 'preposition': '介系詞', 'conjunction': '連接詞', 
@@ -708,28 +749,23 @@
                       if (part.pos && posMap[part.pos.toLowerCase()]) addTag(`詞性: ${posMap[part.pos.toLowerCase()]}`);
                       else if (part.pos) addTag(`詞性: ${part.pos}`);
 
-                      // 處理性別 (gender)
                       const genderMap = { 'masculine': '陽性', 'feminine': '陰性', 'common': '通性' };
                       if (part.gender && genderMap[part.gender.toLowerCase()]) addTag(genderMap[part.gender.toLowerCase()]);
                       else if (part.gender) addTag(part.gender);
 
-                      // 處理數量 (number)
                       const numMap = { 'singular': '單數', 'plural': '複數', 'dual': '雙數' };
                       if (part.number && numMap[part.number.toLowerCase()]) addTag(numMap[part.number.toLowerCase()]);
                       else if (part.number) addTag(part.number);
 
-                      // 處理狀態 (state)
                       const stateMap = { 'absolute': '絕對態', 'construct': '附屬態' };
                       if (part.state && stateMap[part.state.toLowerCase()]) addTag(stateMap[part.state.toLowerCase()]);
 
-                      // 處理動詞語幹 (stem)
                       const stemMap = {
                           'qal': 'Qal(輕)', 'niphal': 'Niphal(被動)', 'piel': 'Piel(強調)', 
                           'pual': 'Pual(強被)', 'hiphil': 'Hiphil(使役)', 'hophal': 'Hophal(使被)', 'hithpael': 'Hithpael(反身)'
                       };
                       if (part.stem && stemMap[part.stem.toLowerCase()]) addTag(`語幹: ${stemMap[part.stem.toLowerCase()]}`);
 
-                      // 處理動詞變化 (conjugation)
                       const conjMap = {
                           'perfect': '完成式', 'imperfect': '未完成式', 'sequential imperfect': '連續未完成式',
                           'imperative': '祈使語氣', 'infinitive construct': '附屬不定詞', 'infinitive absolute': '絕對不定詞',
@@ -738,16 +774,13 @@
                       if (part.conjugation && conjMap[part.conjugation.toLowerCase()]) addTag(`語氣: ${conjMap[part.conjugation.toLowerCase()]}`);
                       else if (part.conjugation) addTag(`語氣: ${part.conjugation}`);
 
-                      // 處理人稱 (person)
                       const personMap = { '1st': '第一人稱', '2nd': '第二人稱', '3rd': '第三人稱' };
                       if (part.person && personMap[part.person.toLowerCase()]) addTag(personMap[part.person.toLowerCase()]);
                   });
-                  
-                  // 如果成功提取標籤，直接返回
                   if (tags.length > 0) return tags;
               }
 
-              // 備用字串解析邏輯
+              // 備用字串解析邏輯 (Fallback)
               let rawCode = '';
               let posRaw = '';
               
@@ -978,7 +1011,8 @@
                     bookId: verseData.bookId,
                     chapter: verseData.chapter,
                     verseNum: verseData.verseNum,
-                    wordIndex: wordIndex
+                    wordIndex: wordIndex,
+                    isOT: verseData.isOT // 🆕 記錄是新約還是舊約，以決定找哪個形態庫
                 });
             } else {
                 setDictContext(null);
@@ -1012,7 +1046,7 @@
               }
               
               const renderedWords = words.map((wordObj, i) => {
-                  const wStr = wordObj.text || wordObj;
+                  const wStr = wordObj.text || wordObj.word || wordObj; // 支援新約的 .word 屬性
                   return (
                       <span key={i} onClick={() => handleWordClick(wStr, config, v, i)} className="inline-flex flex-col items-center cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded px-0.5 py-1 transition-colors group">
                         <span style={{ fontSize: `${fs}px` }} className={`font-bold leading-none ${v.isOT ? 'text-indigo-900 dark:text-indigo-300' : 'text-emerald-900 dark:text-emerald-300'}`}>{wStr}</span>
@@ -1025,13 +1059,21 @@
           };
 
           const getContextMorphology = () => {
-              if (!dictContext || !loadedBibles['morph-wlc']) return null;
+              if (!dictContext) return null;
+              
               try {
-                  const { bookId, chapter, verseNum, wordIndex } = dictContext;
-                  const bookData = loadedBibles['morph-wlc'][bookId];
+                  const { bookId, chapter, verseNum, wordIndex, isOT } = dictContext;
+                  // 🆕 根據新舊約選擇正確的形態學資料庫
+                  const targetMorphDB = isOT ? loadedBibles['morph-wlc'] : loadedBibles['morph-na28'];
+                  
+                  if (!targetMorphDB) return null;
+                  
+                  const bookData = targetMorphDB[bookId];
                   if (!bookData) return null;
+                  
                   const chapterData = bookData[chapter];
                   if (!chapterData) return null;
+                  
                   const verseData = chapterData[verseNum];
                   if (!verseData) return null;
 
@@ -1128,7 +1170,7 @@
                          </div>
                          <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 p-3 no-scrollbar relative">
                             
-                            {/* 🆕 詳細文法分析區塊 */}
+                            {/* 詳細文法分析區塊 */}
                             {(() => {
                                 const contextMorph = getContextMorphology();
                                 if (contextMorph) {
@@ -1154,9 +1196,10 @@
                                                         </span>
                                                     ))}
                                                 </div>
-                                                {typeof contextMorph === 'object' && contextMorph.lexicon && contextMorph.lexicon.lemma && (
+                                                {/* 🆕 支援 NA28 形態學資料中的 lemma 或 lexicon.lemma */}
+                                                {typeof contextMorph === 'object' && (contextMorph.lemma || (contextMorph.lexicon && contextMorph.lexicon.lemma)) && (
                                                     <div className="mt-2 text-xs font-medium text-slate-500 dark:text-slate-400 relative z-10">
-                                                        原型字: <span className="font-bold text-slate-700 dark:text-slate-300">{contextMorph.lexicon.lemma}</span>
+                                                        原型字: <span className="font-bold text-slate-700 dark:text-slate-300">{contextMorph.lemma || contextMorph.lexicon.lemma}</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -1509,7 +1552,8 @@
                                   { id: 'dict-wlc-strongs', label: 'WLC 希伯來字典' },
                                   { id: 'dict-lxx-strongs', label: 'LXX 七十士字典' },
                                   { id: 'dict-na28-strongs', label: 'NA28 新約字典' },
-                                  { id: 'morph-wlc', label: 'WLC 形態學數據庫 (13檔)' }
+                                  { id: 'morph-wlc', label: 'WLC 形態學數據庫 (13檔)' },
+                                  { id: 'morph-na28', label: 'NA28 形態學數據庫 (3檔)' } // 🆕 新增 NA28 形態學資料庫狀態顯示
                                 ].map(ver => (
                                    <div key={ver.id} className="flex justify-between items-center text-xs p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 transition-colors">
                                       <span className="font-bold text-slate-700 dark:text-slate-300 text-[11px]">{ver.label}</span>
@@ -1548,6 +1592,7 @@
                                    <option value="dict-lxx-strongs">匯入為：LXX 七十士字典 (lxx_dictionary.json)</option>
                                    <option value="dict-na28-strongs">匯入為：NA28 新約字典 (na28_dictionary.json)</option>
                                    <option value="morph-wlc">匯入為：WLC 形態學與文法資料庫 (共 13 個分割檔)</option>
+                                   <option value="morph-na28">匯入為：NA28 新約形態學與文法資料庫 (共 3 個分割檔)</option>
                                 </select>
                                 
                                 <div className="flex gap-2">
