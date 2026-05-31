@@ -679,24 +679,21 @@
             reader.readAsText(file);
           };
 
-          // --- 🧠 智慧詞根模糊檢索引擎 (Fuzzy Stem Matcher) ---
+          // --- 🧠 智慧詞根模糊檢索引擎 (Fuzzy Stem Matcher) 終極升級版 ---
           const executeDictSearch = (query, currentDictId) => {
               const qRaw = query.trim().toLowerCase(); 
               if (!qRaw) return [];
               
-              // 扒掉所有重音與母音
-              const qClean = removeDiacritics(qRaw);
+              // 統一將希伯來文字尾型態轉換為一般型態 (如 ך->כ, ם->מ) 降低字典比對的誤差
+              const normalizeFinalForms = (str) => str.replace(/ך/g, 'כ').replace(/ם/g, 'מ').replace(/ן/g, 'נ').replace(/ף/g, 'פ').replace(/ץ/g, 'צ');
+              
+              // 扒掉所有重音與母音，並正規化字尾
+              const qClean = normalizeFinalForms(removeDiacritics(qRaw));
 
               // 🛑 特殊情況攔截：希伯來文馬所拉文本的段落標記與特殊符號
-              if (qClean === 'פ') {
-                  return [{ strongs: '標記', lemma: 'פ (Petuhah)', gloss: '開放段落標記 (Open Paragraph)', strongs_definition: '馬所拉文本中的段落標記，表示一個新的大段落或主題。它不是一個單字，因此沒有編號。' }];
-              }
-              if (qClean === 'ס') {
-                  return [{ strongs: '標記', lemma: 'ס (Setumah)', gloss: '封閉段落標記 (Closed Paragraph)', strongs_definition: '馬所拉文本中的段落標記，表示段落內的較小停頓。它不是一個單字，因此沒有編號。' }];
-              }
-              if (qClean === '׀' || qRaw === '׀') {
-                  return [{ strongs: '標記', lemma: '׀ (Paseq)', gloss: '分隔符號 (Divider)', strongs_definition: '文本中的垂直分隔線，用於引導朗讀暫停或分開容易混淆的單字。' }];
-              }
+              if (qClean === 'פ') return [{ strongs: '標記', lemma: 'פ (Petuhah)', gloss: '開放段落標記 (Open Paragraph)', strongs_definition: '馬所拉文本中的段落標記，表示一個新的大段落或主題。它不是一個單字，因此沒有編號。' }];
+              if (qClean === 'ס') return [{ strongs: '標記', lemma: 'ס (Setumah)', gloss: '封閉段落標記 (Closed Paragraph)', strongs_definition: '馬所拉文本中的段落標記，表示段落內的較小停頓。它不是一個單字，因此沒有編號。' }];
+              if (qClean === '׀' || qRaw === '׀') return [{ strongs: '標記', lemma: '׀ (Paseq)', gloss: '分隔符號 (Divider)', strongs_definition: '文本中的垂直分隔線，用於引導朗讀暫停或分開容易混淆的單字。' }];
 
               if (!loadedBibles[currentDictId]) return [];
 
@@ -707,58 +704,92 @@
               // 🛡️ 希伯來文專用：提取強子音 (去除弱字母 א, ה, ו, י)，這對還原字根極度有效
               const getStrongConsonants = (str) => str.replace(/[אהוי]/g, '');
               const qStrong = isHebrewDict ? getStrongConsonants(qClean) : '';
+
+              // 🧩 智慧變體產生器 (解決字首字尾附加問題)
+              const qVariants = new Set([qClean]);
+              if (isHebrewDict) {
+                  // 常見的希伯來文附著介詞與連接詞字首 (由長到短，避免截斷錯誤)
+                  const prefixes = ['וכש', 'ומש', 'ולמ', 'וכה', 'ומה', 'ולה', 'ובש', 'וי', 'ות', 'וב', 'ול', 'וכ', 'ומ', 'וה', 'וש', 'כש', 'מש', 'למ', 'כה', 'מה', 'לה', 'בש', 'ו', 'ב', 'ל', 'כ', 'מ', 'ה', 'ש'];
+                  // 常見的代名詞與複數等字尾 (對應已經 normalizeFinalForms 的格式)
+                  const suffixes = ['יהמ', 'יהנ', 'ינו', 'כמ', 'כנ', 'ימ', 'ות', 'נו', 'המ', 'הנ', 'תי', 'תמ', 'תנ', 'יו', 'ו', 'ה', 'י', 'כ', 'מ', 'נ', 'ת'];
+                  
+                  let bases = [qClean];
+                  // 1. 先產生剝除字首的版本
+                  for (let p of prefixes) {
+                      if (qClean.startsWith(p) && qClean.length > p.length) {
+                          const stripped = qClean.substring(p.length);
+                          qVariants.add(stripped);
+                          bases.push(stripped); // 讓去字首的字也能夠繼續去字尾
+                      }
+                  }
+                  
+                  // 2. 針對原字與已剝去字首的版本，再產生剝除字尾的版本
+                  for (let base of bases) {
+                      for (let s of suffixes) {
+                          if (base.endsWith(s) && base.length > s.length) {
+                              qVariants.add(base.substring(0, base.length - s.length));
+                          }
+                      }
+                  }
+              }
+              const variantsArr = Array.from(qVariants);
               
               for (const [key, data] of Object.entries(dict)) {
                   const strongs = String(data.strongs || key).toLowerCase();
                   const lemmaRaw = data.lemma ? data.lemma.toLowerCase() : '';
-                  const lemmaClean = removeDiacritics(lemmaRaw);
+                  // 字典中的 Lemma 也必須經過相同的正規化處理
+                  const lemmaClean = normalizeFinalForms(removeDiacritics(lemmaRaw));
                   
                   const strongDef = data.strongs_definition ? data.strongs_definition.toLowerCase() : '';
                   const htmlDef = data.definition ? data.definition.toLowerCase() : '';
                   const gloss = data.gloss ? data.gloss.toLowerCase() : '';
                   
-                  // 1. 完全精準命中 (最高優先級)
-                  if (strongs === qRaw || lemmaRaw === qRaw || lemmaClean === qClean || gloss === qRaw) {
-                      results.unshift({ ...data, strongs, score: 100 }); 
-                      continue;
-                  }
-
                   let score = 0;
 
-                  // 2. 智慧前綴/後綴穿透
-                  if (qClean.length >= 2 && lemmaClean.length >= 2) {
-                      if (lemmaClean.length >= 3 && qClean.includes(lemmaClean)) {
-                          score += 60;
-                      } else if (qClean.length >= 3 && lemmaClean.includes(qClean)) {
-                          score += 60;
-                      } else {
-                          let commonLen = 0;
-                          while (commonLen < qClean.length && commonLen < lemmaClean.length && qClean[commonLen] === lemmaClean[commonLen]) {
-                              commonLen++;
-                          }
-                          if (commonLen >= 3) {
-                              score += 50;
-                          } else if (commonLen === 2 && (qClean.length <= 3 || lemmaClean.length <= 3)) {
-                              score += 40;
+                  // 1. 完全精準命中 (最高優先級)
+                  if (strongs === qRaw || lemmaRaw === qRaw || gloss === qRaw || lemmaClean === qClean) {
+                      score = 100;
+                  } 
+                  // 2. 變體精準命中 (如 וְאֵת 扒除 ו 後的 את 與字典的 את 完全一致)
+                  else if (variantsArr.includes(lemmaClean)) {
+                      score = 95;
+                  }
+
+                  // 3. 智慧前綴/後綴穿透 (容錯比對)
+                  if (score === 0) {
+                      for (let variant of variantsArr) {
+                          if (variant.length >= 2 && lemmaClean.length >= 2) {
+                              if (lemmaClean.length >= 3 && variant.includes(lemmaClean)) {
+                                  score = Math.max(score, 60);
+                              } else if (variant.length >= 3 && lemmaClean.includes(variant)) {
+                                  score = Math.max(score, 60);
+                              } else {
+                                  let commonLen = 0;
+                                  while (commonLen < variant.length && commonLen < lemmaClean.length && variant[commonLen] === lemmaClean[commonLen]) {
+                                      commonLen++;
+                                  }
+                                  if (commonLen >= 3) score = Math.max(score, 50);
+                                  else if (commonLen === 2 && (variant.length <= 3 || lemmaClean.length <= 3)) score = Math.max(score, 40);
+                              }
                           }
                       }
                   }
 
-                  // 3. 🛡️ 希伯來文專屬：「強子音 (Root/Stem) 比對引擎」
-                  // 專門對付如 וַיַּ֣עַשׂ (wayya'as) 這種因為首尾弱字母脫落/增加而找不到 עָשָׂה ('asah) 的問題
-                  if (isHebrewDict && score === 0 && qStrong.length >= 2) {
+                  // 4. 🛡️ 希伯來文專屬：「強子音 (Root/Stem) 比對引擎」
+                  if (isHebrewDict && score === 0 && qStrong.length >= 1) {
                       const lemmaStrong = getStrongConsonants(lemmaClean);
-                      if (lemmaStrong.length >= 2) {
-                          // 如果查詢字包含字典字的強子音 (例如 q:ויעש -> עש, lemma:עשה -> עש)
-                          if (qStrong.includes(lemmaStrong)) {
-                              score += 45; 
-                          } else if (lemmaStrong.includes(qStrong)) {
-                              score += 35;
+                      if (lemmaStrong.length >= 1) {
+                          if (qStrong === lemmaStrong && qStrong.length >= 2) {
+                              score = Math.max(score, 85);
+                          } else if (lemmaStrong.length >= 2 && qStrong.includes(lemmaStrong)) {
+                              score = Math.max(score, 45); 
+                          } else if (qStrong.length >= 2 && lemmaStrong.includes(qStrong)) {
+                              score = Math.max(score, 35);
                           }
                       }
                   }
 
-                  // 4. 內文包含檢索
+                  // 5. 內文包含檢索 (兜底機制)
                   if (score === 0) {
                       if (strongDef.includes(qRaw) || htmlDef.includes(qRaw) || gloss.includes(qRaw)) {
                           score += 30;
@@ -774,8 +805,8 @@
               // 排序：分數高的在前；分數相同時，長度越接近查詢字的越前面
               results.sort((a, b) => {
                   if (b.score !== a.score) return b.score - a.score;
-                  const aLenDiff = Math.abs((a.lemma || '').length - qClean.length);
-                  const bLenDiff = Math.abs((b.lemma || '').length - qClean.length);
+                  const aLenDiff = Math.abs((a.lemma || '').length - qRaw.length);
+                  const bLenDiff = Math.abs((b.lemma || '').length - qRaw.length);
                   return aLenDiff - bLenDiff;
               });
 
