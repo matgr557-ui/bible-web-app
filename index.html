@@ -858,11 +858,11 @@
               // 🆕 強制保底字典機制 (Highest Priority: Score 2000)
               // 保證每一個點擊都有翻譯結果，直接把 JSON 裡的 gloss 和 english 轉換成字典結果！
               // ============================================
-              if (contextMorph && (explicitLemma || qClean) && (explicitGloss || explicitEnglish)) {
+              if (contextMorph && (explicitLemma || qClean)) { // 放寬條件：只要有 contextMorph 就觸發
                   results.push({
                       lemma: contextMorph.lemma || (contextMorph.lexicon && contextMorph.lexicon.lemma) || query,
                       strongs: explicitStrongs || '內建',
-                      gloss: explicitGloss || explicitEnglish,
+                      gloss: explicitGloss || explicitEnglish || '無翻譯',
                       definition: explicitEnglish ? `<span class="text-indigo-500 mr-1">內建翻譯:</span> ${explicitEnglish}` : '',
                       score: 2000,
                       isSynthesized: true,
@@ -1005,7 +1005,8 @@
           };
 
           const handleWordClick = (word, versionConfig, verseData, wordIndex) => {
-            const clean = word.replace(/[.,;·׃!?()[\]{}"'־]/g, '').trim();
+            // 擴充正則表達式，移除更多標點符號，包含希臘文分號 (·) 和問號 (;)
+            const clean = word.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim();
             if (!clean || clean === '尚未匯入' || clean.includes('尚未')) return;
 
             let activeDict = 'dict-wlc-strongs';
@@ -1015,13 +1016,27 @@
             // 🆕 先提取該字的詳細形態學資料，等一下直接傳給搜尋引擎
             let targetMorphInfo = null;
             if (verseData && wordIndex !== undefined) {
-                const targetMorphDB = verseData.isOT ? loadedBibles['morph-wlc'] : loadedBibles['morph-na28'];
-                if (targetMorphDB) {
-                    const bData = targetMorphDB[verseData.bookId];
-                    if (bData && bData[verseData.chapter] && bData[verseData.chapter][verseData.verseNum]) {
-                        const vData = bData[verseData.chapter][verseData.verseNum];
-                        // 支援 WLC 的巢狀陣列與 NA28 的平坦陣列
-                        targetMorphInfo = Array.isArray(vData) ? vData[wordIndex] : (vData[wordIndex] || vData[String(wordIndex)]);
+                // 如果是新約，直接從原本的經文資料 (verseData.original['orig-na28']) 裡面抓，因為 NA28 的資料已經把所有東西包在一起了！
+                if (!verseData.isOT && verseData.original['orig-na28']) {
+                     const na28Words = verseData.original['orig-na28'];
+                     if (Array.isArray(na28Words)) {
+                         // 嘗試用 index 抓
+                         targetMorphInfo = na28Words[wordIndex];
+                         // 如果 index 抓出來的字不對，用文字去比對
+                         if (targetMorphInfo && targetMorphInfo.word && targetMorphInfo.word.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() !== clean) {
+                             targetMorphInfo = na28Words.find(w => w.word && w.word.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() === clean) || null;
+                         }
+                     }
+                } 
+                // 舊約邏輯保持不變
+                else {
+                    const targetMorphDB = loadedBibles['morph-wlc'];
+                    if (targetMorphDB) {
+                        const bData = targetMorphDB[verseData.bookId];
+                        if (bData && bData[verseData.chapter] && bData[verseData.chapter][verseData.verseNum]) {
+                            const vData = bData[verseData.chapter][verseData.verseNum];
+                            targetMorphInfo = Array.isArray(vData) ? vData[wordIndex] : (vData[wordIndex] || vData[String(wordIndex)]);
+                        }
                     }
                 }
             }
