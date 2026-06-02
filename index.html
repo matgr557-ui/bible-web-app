@@ -64,9 +64,8 @@
           'orig-na28': 'NA28_Greek_New_Testament.json',
           'dict-wlc-strongs': 'wlc_hebrew_dictionary.json',
           'dict-lxx-strongs': 'lxx_dictionary.json',
-          'dict-na28-strongs': 'na28_dictionary.json',
+          // 已經將 'dict-na28-strongs' 從雲端下載列表中徹底移除，改由動態生成
           'morph-wlc': Array.from({ length: 13 }, (_, i) => `wlc_morph_part_${i + 1}.json`),
-          // 註冊 NA28 新約形態學資料庫 (3 個分割檔)
           'morph-na28': ['nt_morphology_1.json', 'nt_morphology_2.json', 'nt_morphology_3.json']
         };
 
@@ -92,7 +91,7 @@
             'moon': <Fragment><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></Fragment>,
             'database': <Fragment><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></Fragment>,
             'book-open': <Fragment><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></Fragment>,
-            'settings': <Fragment><path d="M12.22 2h-.44a2 2 0 0 0-2 2l-.2.1a2 2 0 0 1-2.81.25l-.17-.1a2 2 0 0 0-2.81.14l-.31.31a2 2 0 0 0 .14 2.81l.1.17a2 2 0 0 1-.25 2.81l-.1.2a2 2 0 0 0-2 2v.44a2 2 0 0 0 2 2l.1.2a2 2 0 0 1 .25 2.81l-.1.17a2 2 0 0 0-.14 2.81l.31.31a2 2 0 0 0 2.81-.14l.17-.1a2 2 0 0 1 2.81-.25l.2.1a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2l.2-.1a2 2 0 0 1 2.81-.25l.17.1a2 2 0 0 0 2.81-.14l.31-.31a2 2 0 0 0-.14-2.81l-.1-.17a2 2 0 0 1 .25-2.81l.1-.2a2 2 0 0 0 2-2v-.44a2 2 0 0 0-2-2l-.1-.2a2 2 0 0 1-.25-2.81l.1-.17a2 2 0 0 0 .14-2.81l-.31-.31a2 2 0 0 0-2.81.14l-.17.1a2 2 0 0 1-2.81.25l-.2-.1a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></Fragment>,
+            'settings': <Fragment><path d="M12.22 2h-.44a2 2 0 0 0-2 2l-.2.1a2 2 0 0 1-2.81.25l-.17-.1a2 2 0 0 0-2.81.14l-.31.31a2 2 0 0 0 .14 2.81l.1.17a2 2 0 0 1-.25 2.81l-.1.2a2 2 0 0 0-2 2v.44a2 2 0 0 0 2 2l.1.2a2 2 0 0 1 .25 2.81l-.1.17a2 2 0 0 0-.14 2.81l.31-.31a2 2 0 0 0-2.81.14l-.17.1a2 2 0 0 1-2.81.25l-.2-.1a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></Fragment>,
             'cloud-download': <Fragment><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m8 17 4 4 4-4"/></Fragment>,
             'upload': <Fragment><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></Fragment>,
             'info': <Fragment><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></Fragment>
@@ -177,6 +176,55 @@
             { name: '約翰三書', en: '3 John', abbr: '3Jn', chapters: 1, id: '3JO' }, { name: '猶大書', en: 'Jude', abbr: 'Jud', chapters: 1, id: 'JUD' },
             { name: '啟示錄', en: 'Revelation', abbr: 'Rev', chapters: 22, id: 'REV' }
           ]
+        };
+
+        // --- 深層合併演算法 (修復 JSON 檔案分割覆蓋的致命 Bug) ---
+        const deepMerge = (target, source) => {
+            for (const key in source) {
+                if (source[key] !== null && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+                    if (!target[key] || typeof target[key] !== 'object' || Array.isArray(target[key])) {
+                        target[key] = {};
+                    }
+                    deepMerge(target[key], source[key]);
+                } else {
+                    target[key] = source[key];
+                }
+            }
+            return target;
+        };
+
+        // --- 動態生成 NA28 字典 (免除外部字典需求) ---
+        const buildDynamicDict = (morphDb) => {
+            const dict = {};
+            try {
+                for (const bId in morphDb) {
+                    for (const ch in morphDb[bId]) {
+                        for (const v in morphDb[bId][ch]) {
+                            const verseData = morphDb[bId][ch][v];
+                            const words = Array.isArray(verseData) ? verseData : Object.values(verseData);
+                            for (const w of words) {
+                                if (!w) continue;
+                                const s = Array.isArray(w.strongs) ? w.strongs[0] : w.strongs;
+                                if (s && !dict[s]) {
+                                    dict[s] = {
+                                        strongs: s,
+                                        lemma: w.lemma || (w.lexicon && w.lexicon.lemma) || '',
+                                        gloss: w.gloss || (w.lexicon && w.lexicon.gloss) || '',
+                                        definition: w.english ? `<span class="text-indigo-500 mr-1">內建翻譯:</span> ${String(w.english).replace(/</g, '&lt;').replace(/>/g, '&gt;')}` : '',
+                                        source: 'NA28 形態學動態字典',
+                                        morphology: w.morphology,
+                                        morph_code: w.morph_code,
+                                        pos: w.pos
+                                    };
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("構建動態字典失敗:", e);
+            }
+            return dict;
         };
 
         // --- 智慧音譯引擎 ---
@@ -356,7 +404,7 @@
                     const firstKey = Object.keys(rawJson)[0];
                     if (!firstKey) return result;
 
-                    // 🆕 支援新約 NA28 的平坦結構： { "Mat.1.1": [ { "word": "...", ... } ] }
+                    // 支援新約 NA28 的平坦結構： { "Mat.1.1": [ { "word": "...", ... } ] }
                     if (firstKey.includes('.') && Array.isArray(rawJson[firstKey])) {
                         for (const verseRef in rawJson) {
                             const ref = parseVerseRef(verseRef);
@@ -364,7 +412,7 @@
                                 const bId = getBookId(ref.bookAbbr);
                                 if (bId) {
                                     ensurePath(bId, ref.chapter);
-                                    // 儲存整個 words 陣列，這樣之後點擊單字時才能拿到完整物件 (包含 gloss/english)
+                                    // 儲存整個 words 陣列
                                     result[bId][ref.chapter][ref.verse] = rawJson[verseRef];
                                 }
                             }
@@ -436,14 +484,13 @@
             let tags = [];
             const addTag = (tag) => { if (tag && !tags.includes(tag)) tags.push(tag); };
 
-            // 🆕 升級 1：處理 NA28 新格式 (如 "Function=Verb; Tense=Present; Voice=Active")
+            // 處理 NA28 新格式 (如 "Function=Verb; Tense=Present; Voice=Active")
             if (rawCodeOrObj && rawCodeOrObj.morphology && typeof rawCodeOrObj.morphology === 'string' && rawCodeOrObj.morphology.includes('=')) {
                 rawCodeOrObj.morphology.split(';').forEach(part => {
                     const cleanPart = part.trim();
                     if (cleanPart) {
                         const [key, val] = cleanPart.split('=');
                         if (key && val) {
-                            // 英文文法標籤對應繁體中文
                             const transMap = {
                                 'Function': '功能', 'Verb': '動詞', 'Noun': '名詞', 'Adjective': '形容詞', 'Conjunction': '連接詞', 'Article': '冠詞', 'Preposition': '介系詞', 'Interjection': '感嘆詞', 'Particle': '助詞', 'Pronoun': '代名詞', 'Relative pronoun': '關係代名詞', 'Definite article': '定冠詞', 'Personal pronoun': '人稱代名詞', 'Demonstrative pronoun': '指示代名詞', 'Reflexive pronoun': '反身代名詞', 'Interrogative pronoun': '疑問代名詞', 'Possessive pronoun': '所有格代名詞', 'Particle or Disjunctive': '助詞/反義詞',
                                 'Tense': '時態', 'Present': '現在式', 'Aorist': '不定過去式', 'Imperfect': '未完成式', 'Perfect': '完成式', 'Future': '未來式', 'Pluperfect': '過去完成式', '2nd Aorist': '第二不定過去式', '2nd Future': '第二未來式',
@@ -471,11 +518,10 @@
                 if (rawCodeOrObj.pos && !rawCodeOrObj.morphology.includes('Function=')) addTag(`詞性: ${rawCodeOrObj.pos}`);
                 if (rawCodeOrObj.morph_code) addTag(`代碼: ${rawCodeOrObj.morph_code}`);
                 
-                // 成功解析新格式就直接返回
                 if (tags.length > 0) return tags;
             }
 
-            // 升級 2：處理 WLC 舊約自訂的 morph_analysis 結構
+            // 處理 WLC 舊約自訂的 morph_analysis 結構
             if (rawCodeOrObj && typeof rawCodeOrObj === 'object' && rawCodeOrObj.morph_analysis && rawCodeOrObj.morph_analysis.parts) {
                 rawCodeOrObj.morph_analysis.parts.forEach(part => {
                     const posMap = {
@@ -638,7 +684,14 @@
           useEffect(() => { setSavedState('bible_bookmarks', bookmarks); }, [bookmarks]);
 
           useEffect(() => {
-            loadFromDB().then(data => { setLoadedBibles(data); setAppReady(true); })
+            loadFromDB().then(data => { 
+                // 啟動時：如果偵測到 NA28 形態學數據，自動在記憶體裡生出「NA28 動態字典」
+                if (data['morph-na28']) {
+                    data['dict-na28-strongs'] = buildDynamicDict(data['morph-na28']);
+                }
+                setLoadedBibles(data); 
+                setAppReady(true); 
+            })
             .catch(e => { console.warn("資料庫失敗", e); setAppReady(true); });
           }, []);
 
@@ -688,7 +741,13 @@
               if (window.confirm(`確定要單獨刪除「${label}」的全部數據嗎？`)) {
                   try {
                       await deleteFromDB(id);
-                      setLoadedBibles(prev => { const next = { ...prev }; delete next[id]; return next; });
+                      setLoadedBibles(prev => { 
+                          const next = { ...prev }; 
+                          delete next[id]; 
+                          // 如果刪除了形態學，連帶清除動態產生的字典
+                          if (id === 'morph-na28') delete next['dict-na28-strongs'];
+                          return next; 
+                      });
                       setToastMsg(`🗑️ 已成功刪除：${label}`);
                   } catch (err) { setToastMsg(`❌ 刪除失敗：${err.message}`); }
                   setTimeout(() => setToastMsg(''), 2500);
@@ -778,7 +837,8 @@
                         const response = await fetch(url);
                         if (!response.ok) throw new Error(`檔案 ${fileOrFiles[i]} 請求失敗`);
                         const json = await response.json();
-                        Object.assign(mergedData, normalizeBibleData(json));
+                        // 修正致命 Bug: 確保多檔案合併不會把先前的經文覆蓋掉！
+                        deepMerge(mergedData, normalizeBibleData(json));
                     }
                 } else {
                     setToastMsg(`⏳ 正在從 GitHub 下載 ${importTarget.toUpperCase()}...`);
@@ -790,8 +850,17 @@
                 }
 
                 if (Object.keys(mergedData).length > 0) {
-                  await saveToDB(importTarget, mergedData);
-                  setLoadedBibles(prev => ({ ...prev, [importTarget]: mergedData }));
+                  const existingData = loadedBibles[importTarget] || {};
+                  const finalData = deepMerge({ ...existingData }, mergedData);
+
+                  await saveToDB(importTarget, finalData);
+                  setLoadedBibles(prev => {
+                      const next = { ...prev, [importTarget]: finalData };
+                      if (importTarget === 'morph-na28') {
+                          next['dict-na28-strongs'] = buildDynamicDict(finalData);
+                      }
+                      return next;
+                  });
                   setToastMsg(`✅ ${importTarget.toUpperCase()} 下載並儲存成功！`);
                 } else {
                   setToastMsg(`❌ 解析失敗：無法識別結構 (請檢查檔案格式是否正確)`);
@@ -813,9 +882,19 @@
                     let json; try { json = JSON.parse(evt.target.result); } catch (je) { throw new Error(`JSON 語法故障 (${je.message})`); }
                     const normalized = normalizeBibleData(json);
                     if (Object.keys(normalized).length > 0) {
-                      try { await saveToDB(importTarget, normalized); } catch (de) { throw new Error(`資料庫權限出錯 (${de.message || de})`); }
-                      setLoadedBibles(prev => ({ ...prev, [importTarget]: normalized }));
-                      setToastMsg(`✅ ${importTarget.toUpperCase()} 匯入成功`);
+                        const existingData = loadedBibles[importTarget] || {};
+                        const mergedData = deepMerge({ ...existingData }, normalized);
+                        
+                        try { await saveToDB(importTarget, mergedData); } catch (de) { throw new Error(`資料庫權限出錯 (${de.message || de})`); }
+                        
+                        setLoadedBibles(prev => {
+                            const next = { ...prev, [importTarget]: mergedData };
+                            if (importTarget === 'morph-na28') {
+                                next['dict-na28-strongs'] = buildDynamicDict(mergedData);
+                            }
+                            return next;
+                        });
+                        setToastMsg(`✅ ${importTarget.toUpperCase()} 匯入成功`);
                     } else { setToastMsg('❌ 格式不支援或解析失敗'); }
                 } catch (err) { setToastMsg(`❌ ${err.message}`); }
                 setImporting(false); e.target.value = '';
@@ -838,7 +917,7 @@
               let results = []; 
               const isHebrewDict = currentDictId.includes('wlc');
               
-              // 🆕 從點擊上下文直接提取精確的 Strong's 編號與 Lemma 原型字
+              // 從點擊上下文直接提取精確的 Strong's 編號與 Lemma 原型字
               let explicitStrongs = null;
               let explicitLemma = null;
               let explicitGloss = null;
@@ -860,7 +939,7 @@
               }
 
               // ============================================
-              // 🆕 強制保底字典機制 (Highest Priority: Score 2000)
+              // 強制保底字典機制 (Highest Priority: Score 2000)
               // 保證每一個點擊都有翻譯結果，直接把 JSON 裡的 gloss 和 english 轉換成字典結果！
               // ============================================
               if (contextMorph && (explicitLemma || qClean)) {
@@ -882,7 +961,7 @@
                   });
               }
 
-              // 如果沒有外部字典，直接返回上面建立的保底結果
+              // 如果連動態字典都沒有，直接返回上面建立的保底結果
               if (!loadedBibles[currentDictId]) {
                   return results;
               }
@@ -926,7 +1005,7 @@
                   
                   let score = 0;
 
-                  // 絕對優先級 (Score: 1000)：如果有準確的 Strong's 編號，直接無腦匹配數字部分
+                  // 絕對優先級 (Score: 1000)
                   if (explicitStrongs) {
                       const eMatch = explicitStrongs.match(/\d+/);
                       const dMatch = strongs.match(/\d+/);
@@ -935,12 +1014,12 @@
                       }
                   }
                   
-                  // 次高優先級 (Score: 900)：如果我們有準確的 Lemma，直接精確匹配
+                  // 次高優先級 (Score: 900)
                   if (score === 0 && explicitLemma && lemmaClean === explicitLemma) {
                       score = 900;
                   }
 
-                  // 原本的文字匹配邏輯 (做為手動輸入搜尋的退路)
+                  // 原本的文字匹配邏輯
                   if (score === 0) {
                       if (strongs === qRaw || lemmaRaw === qRaw || gloss === qRaw || lemmaClean === qClean) {
                           score = 100;
@@ -1013,15 +1092,15 @@
           };
 
           const handleWordClick = (word, versionConfig, verseData, wordIndex) => {
-            // 擴充正則表達式，移除更多標點符號，包含希臘文分號 (·) 和問號 (;)
             const clean = word.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim();
             if (!clean || clean === '尚未匯入' || clean.includes('尚未')) return;
 
             let activeDict = 'dict-wlc-strongs';
             if (versionConfig === 'orig-lxx') activeDict = 'dict-lxx-strongs';
+            // 自動將新約對應到動態字典
             if (versionConfig === 'orig-na28') activeDict = 'dict-na28-strongs';
             
-            // 🆕 先提取該字的詳細形態學資料，等一下直接傳給搜尋引擎
+            // 先提取該字的詳細形態學資料
             let targetMorphInfo = null;
             if (verseData && wordIndex !== undefined) {
                 const targetMorphDB = verseData.isOT ? loadedBibles['morph-wlc'] : loadedBibles['morph-na28'];
@@ -1063,7 +1142,7 @@
 
             setDictTarget(activeDict);
             setDictQuery(clean); 
-            // 🆕 將 targetMorphInfo 傳給搜尋引擎，鎖定 100% 精確匹配！
+            // 將 targetMorphInfo 傳給搜尋引擎，鎖定 100% 精確匹配！
             setDictResults(executeDictSearch(clean, activeDict, targetMorphInfo)); 
             setDictOpen(true);
           };
@@ -1089,7 +1168,6 @@
               }
               
               const renderedWords = words.map((wordObj, i) => {
-                  // 支援 NA28 的 word 屬性 或 WLC 的 text 屬性
                   const wStr = wordObj.word || wordObj.text || wordObj; 
                   return (
                       <span key={i} onClick={() => handleWordClick(wStr, config, v, i)} className="inline-flex flex-col items-center cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded px-0.5 py-1 transition-colors group">
@@ -1107,7 +1185,6 @@
               
               try {
                   const { bookId, chapter, verseNum, wordIndex, isOT } = dictContext;
-                  // 根據新舊約選擇正確的形態學資料庫
                   const targetMorphDB = isOT ? loadedBibles['morph-wlc'] : loadedBibles['morph-na28'];
                   
                   if (!targetMorphDB) return null;
@@ -1207,7 +1284,7 @@
                          <select value={dictTarget} onChange={e => { setDictTarget(e.target.value); setDictResults(executeDictSearch(dictQuery, e.target.value, null)); }} className="text-[11px] font-black bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 outline-none text-indigo-600 dark:text-indigo-400 cursor-pointer">
                             <option value="dict-wlc-strongs">WLC 希伯來字典</option>
                             <option value="dict-lxx-strongs">LXX 七十士字典</option>
-                            <option value="dict-na28-strongs">NA28 新約字典</option>
+                            <option value="dict-na28-strongs">NA28 形態學動態字典</option>
                          </select>
                          <button onClick={() => setDictOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
                             <X className="w-4 h-4"/>
@@ -1262,7 +1339,7 @@
 
                             {!loadedBibles[dictTarget] && dictResults.length === 0 ? (
                                 <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs font-bold text-center px-4">
-                                    <Database className="w-8 h-8 mb-3 opacity-50" />請先在「設定」頁面匯入<br/>該字典檔案。
+                                    <Database className="w-8 h-8 mb-3 opacity-50" />請先在「設定」頁面匯入<br/>對應的語言數據庫檔案。
                                 </div>
                             ) : dictResults.length === 0 ? (
                                 <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs font-bold text-center py-10">
@@ -1305,6 +1382,7 @@
 
                                           {r.strongs_definition && <p className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed"><span className="text-slate-400 font-normal mr-1">定義:</span> {r.strongs_definition}</p>}
                                           {r.definition && <div className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed mt-1" dangerouslySetInnerHTML={{ __html: r.definition.includes('<span') ? r.definition : `<span class="text-slate-400 font-normal mr-1">定義:</span> ${r.definition}` }} />}
+                                          {r.derivation && r.derivation.toUpperCase() !== 'N/A' && r.derivation.toUpperCase() !== 'NONE' && <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mt-1"><span className="font-normal mr-1">字源:</span> {r.derivation}</p>}
                                           {r.kjv_definition && <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mt-1"><span className="font-normal mr-1">KJV:</span> {r.kjv_definition}</p>}
                                           {r.gloss && !r.strongs_definition && (!r.definition || r.isSynthesized) && <p className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed mt-1"><span className="text-slate-400 font-normal mr-1">簡義:</span> {r.gloss}</p>}
                                        </div>
@@ -1604,7 +1682,7 @@
                                   { id: 'orig-wlc', label: 'WLC 原文 (希伯來文)' }, { id: 'orig-lxx', label: 'LXX 譯本 (希臘文)' }, { id: 'orig-na28', label: 'NA28 新約 (希臘文)' },
                                   { id: 'dict-wlc-strongs', label: 'WLC 希伯來字典' },
                                   { id: 'dict-lxx-strongs', label: 'LXX 七十士字典' },
-                                  { id: 'dict-na28-strongs', label: 'NA28 新約字典' },
+                                  // 🎉 已刪除過時的 NA28 字典選項
                                   { id: 'morph-wlc', label: 'WLC 形態學數據庫 (13檔)' },
                                   { id: 'morph-na28', label: 'NA28 形態學數據庫 (3檔)' }
                                 ].map(ver => (
@@ -1643,7 +1721,7 @@
                                    <option value="orig-na28">匯入為：NA28 新約原文 (希臘文)</option>
                                    <option value="dict-wlc-strongs">匯入為：WLC 希伯來字典 (wlc_hebrew_dictionary.json)</option>
                                    <option value="dict-lxx-strongs">匯入為：LXX 七十士字典 (lxx_dictionary.json)</option>
-                                   <option value="dict-na28-strongs">匯入為：NA28 新約字典 (na28_dictionary.json)</option>
+                                   {/* 🎉 已從下載清單中刪除過時的 NA28 字典 */}
                                    <option value="morph-wlc">匯入為：WLC 形態學與文法資料庫 (共 13 個分割檔)</option>
                                    <option value="morph-na28">匯入為：NA28 新約形態學與文法資料庫 (共 3 個分割檔)</option>
                                 </select>
