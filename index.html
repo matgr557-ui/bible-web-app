@@ -92,7 +92,7 @@
             'moon': <Fragment><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></Fragment>,
             'database': <Fragment><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></Fragment>,
             'book-open': <Fragment><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></Fragment>,
-            'settings': <Fragment><path d="M12.22 2h-.44a2 2 0 0 0-2 2l-.2.1a2 2 0 0 1-2.81.25l-.17-.1a2 2 0 0 0-2.81.14l-.31.31a2 2 0 0 0 .14 2.81l.1.17a2 2 0 0 1-.25 2.81l-.1.2a2 2 0 0 0-2 2v.44a2 2 0 0 0 2 2l.1.2a2 2 0 0 1 .25 2.81l-.1.17a2 2 0 0 0-.14 2.81l.31.31a2 2 0 0 0 2.81-.14l.17-.1a2 2 0 0 1-2.81.25l.2-.1a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2l.2-.1a2 2 0 0 1 2.81-.25l.17.1a2 2 0 0 0 2.81-.14l.31-.31a2 2 0 0 0-.14-2.81l-.1-.17a2 2 0 0 1 .25-2.81l.1-.2a2 2 0 0 0 2-2v-.44a2 2 0 0 0-2-2l-.1-.2a2 2 0 0 1-.25-2.81l.1-.17a2 2 0 0 0 .14-2.81l-.31-.31a2 2 0 0 0-2.81.14l-.17.1a2 2 0 0 1-2.81.25l-.2-.1a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></Fragment>,
+            'settings': <Fragment><path d="M12.22 2h-.44a2 2 0 0 0-2 2l-.2.1a2 2 0 0 1-2.81.25l-.17-.1a2 2 0 0 0-2.81.14l-.31.31a2 2 0 0 0 .14 2.81l.1.17a2 2 0 0 1-.25 2.81l-.1.2a2 2 0 0 0-2 2v.44a2 2 0 0 0 2 2l.1.2a2 2 0 0 1 .25 2.81l-.1.17a2 2 0 0 0-.14 2.81l.31.31a2 2 0 0 0 2.81-.14l.17-.1a2 2 0 0 1 2.81-.25l.2.1a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2l.2-.1a2 2 0 0 1 2.81-.25l.17.1a2 2 0 0 0 2.81-.14l.31-.31a2 2 0 0 0-.14-2.81l-.1-.17a2 2 0 0 1 .25-2.81l.1-.2a2 2 0 0 0 2-2v-.44a2 2 0 0 0-2-2l-.1-.2a2 2 0 0 1-.25-2.81l.1-.17a2 2 0 0 0 .14-2.81l-.31-.31a2 2 0 0 0-2.81.14l-.17.1a2 2 0 0 1-2.81.25l-.2-.1a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></Fragment>,
             'cloud-download': <Fragment><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m8 17 4 4 4-4"/></Fragment>,
             'upload': <Fragment><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></Fragment>,
             'info': <Fragment><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></Fragment>
@@ -836,8 +836,9 @@
               if (qClean === '׀' || qRaw === '׀') return [{ strongs: '標記', lemma: '׀ (Paseq)', gloss: '分隔符號 (Divider)', strongs_definition: '文本中的垂直分隔線，用於引導朗讀暫停或分開容易混淆的單字。' }];
 
               let results = []; 
+              const isHebrewDict = currentDictId.includes('wlc');
               
-              // 🆕 升級：從點擊上下文直接提取精確的 Strong's 編號與 Lemma 原型字
+              // 🆕 從點擊上下文直接提取精確的 Strong's 編號與 Lemma 原型字
               let explicitStrongs = null;
               let explicitLemma = null;
               let explicitGloss = null;
@@ -851,14 +852,22 @@
                       explicitLemma = normalizeFinalForms(removeDiacritics(contextMorph.lemma || contextMorph.lexicon.lemma));
                   }
                   explicitGloss = contextMorph.gloss || (contextMorph.lexicon && contextMorph.lexicon.gloss);
-                  explicitEnglish = contextMorph.english;
+                  
+                  // 將 <the> 等含有角括號的內容轉換，防止被 HTML 隱藏
+                  if (contextMorph.english) {
+                      explicitEnglish = String(contextMorph.english).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                  }
               }
 
               // ============================================
               // 🆕 強制保底字典機制 (Highest Priority: Score 2000)
               // 保證每一個點擊都有翻譯結果，直接把 JSON 裡的 gloss 和 english 轉換成字典結果！
               // ============================================
-              if (contextMorph && (explicitLemma || qClean)) { // 放寬條件：只要有 contextMorph 就觸發
+              if (contextMorph && (explicitLemma || qClean)) {
+                  let sourceName = '內建解析';
+                  if (contextMorph.english && !isHebrewDict) sourceName = 'NA28 形態學數據庫';
+                  if ((contextMorph.lexicon || isHebrewDict) && contextMorph.gloss) sourceName = 'WLC 形態學數據庫';
+
                   results.push({
                       lemma: contextMorph.lemma || (contextMorph.lexicon && contextMorph.lexicon.lemma) || query,
                       strongs: explicitStrongs || '內建',
@@ -866,7 +875,7 @@
                       definition: explicitEnglish ? `<span class="text-indigo-500 mr-1">內建翻譯:</span> ${explicitEnglish}` : '',
                       score: 2000,
                       isSynthesized: true,
-                      // 保留原始的形態學資料讓卡片可以渲染綠色的標籤
+                      source: sourceName,
                       morphology: contextMorph.morphology,
                       morph_code: contextMorph.morph_code,
                       pos: contextMorph.pos
@@ -879,14 +888,13 @@
               }
 
               const dict = loadedBibles[currentDictId];
-              const isHebrewDict = currentDictId.includes('wlc');
 
               const getStrongConsonants = (str) => str.replace(/[אהוי]/g, '');
               const qStrong = isHebrewDict ? getStrongConsonants(qClean) : '';
 
               const qVariants = new Set([qClean]);
               if (isHebrewDict) {
-                  const prefixes = ['וכש', 'ומש', 'ולמ', 'וכה', 'ומה', 'ולה', 'ובש', 'וי', 'ות', 'וב', 'ול', 'וכ', 'ומ', 'וה', 'וש', 'כש', 'מש', 'למ', 'כה', 'מה', 'לה', 'בש', 'ו', 'ב', 'ל', 'כ', 'm', 'ה', 'ש'];
+                  const prefixes = ['וכש', 'ומש', 'ולמ', 'וכה', 'ומה', 'ולה', 'ובש', 'וי', 'ות', 'וב', 'ול', 'וכ', 'ומ', 'וה', 'וש', 'כש', 'מש', 'למ', 'כה', 'מה', 'לה', 'בש', 'ו', 'ב', 'ל', 'כ', 'מ', 'ה', 'ש'];
                   const suffixes = ['יהמ', 'יהנ', 'ינו', 'כמ', 'כנ', 'ימ', 'ות', 'נו', 'המ', 'הנ', 'תי', 'תמ', 'תנ', 'יו', 'ו', 'ה', 'י', 'כ', 'מ', 'נ', 'ת'];
                   
                   let bases = [qClean];
@@ -918,7 +926,7 @@
                   
                   let score = 0;
 
-                  // 🆕 絕對優先級 (Score: 1000)：如果有準確的 Strong's 編號，直接無腦匹配數字部分
+                  // 絕對優先級 (Score: 1000)：如果有準確的 Strong's 編號，直接無腦匹配數字部分
                   if (explicitStrongs) {
                       const eMatch = explicitStrongs.match(/\d+/);
                       const dMatch = strongs.match(/\d+/);
@@ -927,7 +935,7 @@
                       }
                   }
                   
-                  // 🆕 次高優先級 (Score: 900)：如果我們有準確的 Lemma，直接精確匹配
+                  // 次高優先級 (Score: 900)：如果我們有準確的 Lemma，直接精確匹配
                   if (score === 0 && explicitLemma && lemmaClean === explicitLemma) {
                       score = 900;
                   }
@@ -1016,26 +1024,23 @@
             // 🆕 先提取該字的詳細形態學資料，等一下直接傳給搜尋引擎
             let targetMorphInfo = null;
             if (verseData && wordIndex !== undefined) {
-                // 如果是新約，直接從原本的經文資料 (verseData.original['orig-na28']) 裡面抓，因為 NA28 的資料已經把所有東西包在一起了！
-                if (!verseData.isOT && verseData.original['orig-na28']) {
-                     const na28Words = verseData.original['orig-na28'];
-                     if (Array.isArray(na28Words)) {
-                         // 嘗試用 index 抓
-                         targetMorphInfo = na28Words[wordIndex];
-                         // 如果 index 抓出來的字不對，用文字去比對
-                         if (targetMorphInfo && targetMorphInfo.word && targetMorphInfo.word.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() !== clean) {
-                             targetMorphInfo = na28Words.find(w => w.word && w.word.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() === clean) || null;
-                         }
-                     }
-                } 
-                // 舊約邏輯保持不變
-                else {
-                    const targetMorphDB = loadedBibles['morph-wlc'];
-                    if (targetMorphDB) {
-                        const bData = targetMorphDB[verseData.bookId];
-                        if (bData && bData[verseData.chapter] && bData[verseData.chapter][verseData.verseNum]) {
-                            const vData = bData[verseData.chapter][verseData.verseNum];
-                            targetMorphInfo = Array.isArray(vData) ? vData[wordIndex] : (vData[wordIndex] || vData[String(wordIndex)]);
+                const targetMorphDB = verseData.isOT ? loadedBibles['morph-wlc'] : loadedBibles['morph-na28'];
+                if (targetMorphDB) {
+                    const bData = targetMorphDB[verseData.bookId];
+                    if (bData && bData[verseData.chapter] && bData[verseData.chapter][verseData.verseNum]) {
+                        const vData = bData[verseData.chapter][verseData.verseNum];
+                        
+                        if (Array.isArray(vData)) {
+                             // 嘗試用 index 抓
+                             targetMorphInfo = vData[wordIndex];
+                             // 如果 index 抓出來的字不對，用文字去比對
+                             if (targetMorphInfo && targetMorphInfo.word && targetMorphInfo.word.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() !== clean) {
+                                 targetMorphInfo = vData.find(w => w.word && w.word.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() === clean) || null;
+                             } else if (!targetMorphInfo) {
+                                 targetMorphInfo = vData.find(w => w.word && w.word.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() === clean) || null;
+                             }
+                        } else {
+                            targetMorphInfo = vData[wordIndex] || vData[String(wordIndex)];
                         }
                     }
                 }
@@ -1119,6 +1124,12 @@
                   let morphInfo = null;
                   if (Array.isArray(verseData)) {
                       morphInfo = verseData[wordIndex];
+                      // 加入容錯比對
+                      if (morphInfo && morphInfo.word && morphInfo.word.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() !== dictContext.word) {
+                          morphInfo = verseData.find(w => w.word && w.word.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() === dictContext.word) || null;
+                      } else if (!morphInfo) {
+                          morphInfo = verseData.find(w => w.word && w.word.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() === dictContext.word) || null;
+                      }
                   } else if (typeof verseData === 'object') {
                       morphInfo = verseData[wordIndex] || verseData[String(wordIndex)];
                   }
@@ -1262,7 +1273,7 @@
                                    {dictResults.map((r, i) => (
                                        <div key={i} className={`bg-white dark:bg-slate-900 border ${r.isSynthesized ? 'border-indigo-400 dark:border-indigo-600' : 'border-slate-200 dark:border-slate-800'} rounded-lg p-3 shadow-sm relative overflow-hidden`}>
                                           {r.isSynthesized && (
-                                              <div className="absolute top-0 right-0 bg-indigo-500 text-white text-[9px] font-black px-2 py-0.5 rounded-bl-lg opacity-80">內建解析</div>
+                                              <div className="absolute top-0 right-0 bg-indigo-500 text-white text-[9px] font-black px-2 py-0.5 rounded-bl-lg opacity-80">{r.source || '內建解析'}</div>
                                           )}
                                           <div className="flex justify-between items-start mb-2">
                                              <div className="flex items-center gap-2">
