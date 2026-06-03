@@ -1382,7 +1382,8 @@
                                                         r.lemma || r.strongs
                                                     )}
                                                 </span>
-                                                <span className="text-xs italic text-amber-600 dark:text-amber-500">{r.transliteration || r.gloss || r.english}</span>
+                                                {/* 核心修改 1：確保橙色字優先顯示英文字義 (gloss || english || transliteration) */}
+                                                <span className="text-xs italic text-amber-600 dark:text-amber-500">{r.gloss || r.english || r.transliteration}</span>
                                              </div>
                                              <span className="text-[10px] font-black bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-500">{r.strongs || '無編號'}</span>
                                           </div>
@@ -1407,8 +1408,9 @@
                                               );
                                           })()}
 
+                                          {/* 核心修改 2：加入 r.definition !== r.strongs_definition 避免完全相同的文字被印出兩次 */}
                                           {r.strongs_definition && <p className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed"><span className="text-slate-400 font-normal mr-1">定義:</span> {r.strongs_definition}</p>}
-                                          {r.definition && <div className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed mt-1" dangerouslySetInnerHTML={{ __html: r.definition.includes('<span') ? r.definition : `<span class="text-slate-400 font-normal mr-1">定義:</span> ${r.definition}` }} />}
+                                          {r.definition && r.definition !== r.strongs_definition && <div className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed mt-1" dangerouslySetInnerHTML={{ __html: r.definition.includes('<span') ? r.definition : `<span class="text-slate-400 font-normal mr-1">定義:</span> ${r.definition}` }} />}
                                           {r.derivation && r.derivation.toUpperCase() !== 'N/A' && r.derivation.toUpperCase() !== 'NONE' && <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mt-1"><span className="font-normal mr-1">字源:</span> {r.derivation}</p>}
                                           {r.kjv_definition && <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mt-1"><span className="font-normal mr-1">KJV:</span> {r.kjv_definition}</p>}
                                           {(r.gloss || r.english) && !r.strongs_definition && (!r.definition || r.isSynthesized) && <p className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed mt-1"><span className="text-slate-400 font-normal mr-1">簡義:</span> {r.gloss || r.english}</p>}
