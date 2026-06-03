@@ -62,9 +62,9 @@
           'orig-wlc': 'bible_wlc_full.json',
           'orig-lxx': 'lxx_bible.json',
           'orig-na28': 'NA28_Greek_New_Testament.json',
-          'dict-wlc-strongs': 'wlc_hebrew_dictionary.json',
           'dict-lxx-strongs': 'lxx_dictionary.json',
-          'morph-wlc': Array.from({ length: 13 }, (_, i) => `wlc_morph_part_${i + 1}.json`),
+          // 更新為新的 wlc_zh 系列 11 個分割檔
+          'morph-wlc': Array.from({ length: 11 }, (_, i) => `wlc_zh_part_${i + 1}.json`),
           'morph-na28': ['nt_morphology_1.json', 'nt_morphology_2.json', 'nt_morphology_3.json']
         };
 
@@ -192,7 +192,7 @@
             return target;
         };
 
-        // --- 動態生成 NA28 字典 (免除外部字典需求) ---
+        // --- 動態生成 NA28 / WLC 字典 (免除外部字典需求，支援精確字義) ---
         const buildDynamicDict = (morphDb) => {
             const dict = {};
             try {
@@ -208,12 +208,16 @@
                                     dict[s] = {
                                         strongs: s,
                                         lemma: w.lemma || (w.lexicon && w.lexicon.lemma) || '',
+                                        word: w.text || w.word || '',
                                         gloss: w.gloss || (w.lexicon && w.lexicon.gloss) || '',
-                                        definition: w.english ? `<span class="text-indigo-500 mr-1">內建翻譯:</span> ${String(w.english).replace(/</g, '&lt;').replace(/>/g, '&gt;')}` : '',
-                                        source: 'NA28 形態學動態字典',
+                                        definition: w.definition || (w.english ? `<span class="text-indigo-500 mr-1">內建翻譯:</span> ${String(w.english).replace(/</g, '&lt;').replace(/>/g, '&gt;')}` : ''),
+                                        strongs_definition: w.definition || '',
+                                        derivation: w.derivation || '',
+                                        transliteration: w.transliteration || '',
+                                        source: w.text ? 'WLC 動態解析' : 'NA28 動態解析',
                                         morphology: w.morphology,
                                         morph_code: w.morph_code,
-                                        pos: w.pos
+                                        pos: w.part_of_speech || w.pos
                                     };
                                 }
                             }
@@ -343,12 +347,10 @@
             const result = {}; 
             
             // 檢查是否為字典 (Strongs/Lexicon array)
-            // 修改：精準支援包含 index, word, english 的 LXX 字典格式，並防止相同鍵被覆蓋
             if (Array.isArray(rawJson) && rawJson.length > 0 && (rawJson[0].strongs !== undefined || rawJson[0].lemma !== undefined || rawJson[0].definition !== undefined || rawJson[0].gloss !== undefined || rawJson[0].english !== undefined)) {
                 const dictObj = {};
                 rawJson.forEach((item, idx) => {
                     let key = item.index ? `idx_${item.index}` : (item.strongs || item.lemma || item.id || `item_${idx}`);
-                    // 避免覆蓋原本已存在的 key (除非是保證唯一的 index)
                     if (dictObj[key] && !item.index) {
                         key = `${key}_${idx}`;
                     }
@@ -357,7 +359,6 @@
                 return dictObj;
             }
 
-            // 支援傳入是 Object 的傳統字典
             if (rawJson && typeof rawJson === 'object' && !Array.isArray(rawJson)) {
                 const keys = Object.keys(rawJson);
                 if (keys.length > 0 && /^[GH]\d+/.test(keys[0])) return rawJson;
@@ -383,7 +384,6 @@
               'ZECH': 'ZEC', 'MAL': 'MAL'
             };
             
-            // 輔助函數：從 "1Chr.1.1" 這種格式中提取章節
             const parseVerseRef = (refStr) => {
                 if (!refStr) return null;
                 const parts = refStr.split('.');
@@ -404,13 +404,11 @@
             const ensurePath = (bId, ch) => { if(!result[bId]) result[bId] = {}; if(!result[bId][ch]) result[bId][ch] = {}; };
 
             try {
-                // 處理 Object 格式的資料
                 if (rawJson && typeof rawJson === 'object' && !Array.isArray(rawJson)) {
                     
                     const firstKey = Object.keys(rawJson)[0];
                     if (!firstKey) return result;
 
-                    // 支援新約 NA28 的平坦結構： { "Mat.1.1": [ { "word": "...", ... } ] }
                     if (firstKey.includes('.') && Array.isArray(rawJson[firstKey])) {
                         for (const verseRef in rawJson) {
                             const ref = parseVerseRef(verseRef);
@@ -418,7 +416,6 @@
                                 const bId = getBookId(ref.bookAbbr);
                                 if (bId) {
                                     ensurePath(bId, ref.chapter);
-                                    // 儲存整個 words 陣列
                                     result[bId][ref.chapter][ref.verse] = rawJson[verseRef];
                                 }
                             }
@@ -426,7 +423,6 @@
                         return result;
                     }
 
-                    // 支援舊約 WLC 的階層結構： { "1Chr": [ { "verse": "1Chr.1.1", "words": [...] } ] }
                     if (Array.isArray(rawJson[firstKey]) && rawJson[firstKey][0] && rawJson[firstKey][0].verse && rawJson[firstKey][0].words) {
                         for (const bookKey in rawJson) {
                             const bId = getBookId(bookKey);
@@ -443,7 +439,6 @@
                         return result;
                     }
 
-                    // 支援常規 { "GEN": { "1": { "1": "text" } } }
                     const root = rawJson.books || rawJson;
                     for (let bKey in root) {
                         if (['version', 'language', 'translation', 'count'].includes(bKey)) continue;
@@ -490,85 +485,55 @@
             let tags = [];
             const addTag = (tag) => { if (tag && !tags.includes(tag)) tags.push(tag); };
 
-            // 處理 NA28 / LXX 新格式 (如 "Function=Verb; Tense=Present; Voice=Active")
-            if (rawCodeOrObj && rawCodeOrObj.morphology && typeof rawCodeOrObj.morphology === 'string' && rawCodeOrObj.morphology.includes('=')) {
-                rawCodeOrObj.morphology.split(';').forEach(part => {
-                    const cleanPart = part.trim();
-                    if (cleanPart) {
-                        const [key, val] = cleanPart.split('=');
-                        if (key && val) {
-                            const transMap = {
-                                'Function': '功能', 'Verb': '動詞', 'Noun': '名詞', 'Adjective': '形容詞', 'Conjunction': '連接詞', 'Article': '冠詞', 'Preposition': '介系詞', 'Interjection': '感嘆詞', 'Particle': '助詞', 'Pronoun': '代名詞', 'Relative pronoun': '關係代名詞', 'Definite article': '定冠詞', 'Personal pronoun': '人稱代名詞', 'Demonstrative pronoun': '指示代名詞', 'Reflexive pronoun': '反身代名詞', 'Interrogative pronoun': '疑問代名詞', 'Possessive pronoun': '所有格代名詞', 'Particle or Disjunctive': '助詞/反義詞',
-                                'Tense': '時態', 'Present': '現在式', 'Aorist': '不定過去式', 'Imperfect': '未完成式', 'Perfect': '完成式', 'Future': '未來式', 'Pluperfect': '過去完成式', '2nd Aorist': '第二不定過去式', '2nd Future': '第二未來式',
-                                'Voice': '語態', 'Active': '主動', 'Passive': '被動', 'Middle': '關身', 'Middle Deponent': '關身異態', 'Passive Deponent': '被動異態', 'Middle or Passive Deponent': '關/被異態', 'Middle or Passive': '關身或被動',
-                                'Mood': '語氣', 'Indicative': '直陳', 'Subjunctive': '假設', 'Imperative': '祈使', 
-                                'Form': '形式', 'Participle': '分詞', 'Infinitive': '不定詞',
-                                'Person': '人稱', '1st Person': '第一人稱', '2nd Person': '第二人稱', '3rd Person': '第三人稱', '1st': '第一', '2nd': '第二', '3rd': '第三',
-                                'Number': '單複', 'Singular': '單數', 'Plural': '複數',
-                                'Case': '格位', 'Nominative': '主格', 'Genitive': '屬格', 'Dative': '與格', 'Accusative': '賓格', 'Vocative': '呼格',
-                                'Gender': '性別', 'Masculine': '陽性', 'Feminine': '陰性', 'Neuter': '中性',
-                                'Extra': '補充', 'Negative': '否定', 'Interrogative': '疑問', 'Contracted form': '縮寫形式',
-                                'Name type': '專名類型', 'Person Gentilic': '人名/族名', 'Location Gentilic': '地名/族名', 'Location': '地名', 'Individual': '人名', 'Title': '頭銜',
-                                'Adj.Numb.': '數字屬性', 'Indeclinable Numeral': '不變形數字',
-                                'Original language': '原始語言', 'Transcribed from Hebrew': '譯自希伯來文'
-                            };
-                            const transKey = transMap[key.trim()] || key.trim();
-                            const transVal = transMap[val.trim()] || val.trim();
-                            addTag(`${transKey}: ${transVal}`);
-                        } else {
+            // 處理 NA28 / 新 WLC 格式
+            if (rawCodeOrObj && typeof rawCodeOrObj.morphology === 'string') {
+                if (rawCodeOrObj.morphology.includes('=')) {
+                    // NA28 Key=Value 格式
+                    rawCodeOrObj.morphology.split(';').forEach(part => {
+                        const cleanPart = part.trim();
+                        if (cleanPart) {
+                            const [key, val] = cleanPart.split('=');
+                            if (key && val) {
+                                const transMap = {
+                                    'Function': '功能', 'Verb': '動詞', 'Noun': '名詞', 'Adjective': '形容詞', 'Conjunction': '連接詞', 'Article': '冠詞', 'Preposition': '介系詞', 'Interjection': '感嘆詞', 'Particle': '助詞', 'Pronoun': '代名詞', 'Relative pronoun': '關係代名詞', 'Definite article': '定冠詞', 'Personal pronoun': '人稱代名詞', 'Demonstrative pronoun': '指示代名詞', 'Reflexive pronoun': '反身代名詞', 'Interrogative pronoun': '疑問代名詞', 'Possessive pronoun': '所有格代名詞', 'Particle or Disjunctive': '助詞/反義詞',
+                                    'Tense': '時態', 'Present': '現在式', 'Aorist': '不定過去式', 'Imperfect': '未完成式', 'Perfect': '完成式', 'Future': '未來式', 'Pluperfect': '過去完成式', '2nd Aorist': '第二不定過去式', '2nd Future': '第二未來式',
+                                    'Voice': '語態', 'Active': '主動', 'Passive': '被動', 'Middle': '關身', 'Middle Deponent': '關身異態', 'Passive Deponent': '被動異態', 'Middle or Passive Deponent': '關/被異態', 'Middle or Passive': '關身或被動',
+                                    'Mood': '語氣', 'Indicative': '直陳', 'Subjunctive': '假設', 'Imperative': '祈使', 
+                                    'Form': '形式', 'Participle': '分詞', 'Infinitive': '不定詞',
+                                    'Person': '人稱', '1st Person': '第一人稱', '2nd Person': '第二人稱', '3rd Person': '第三人稱', '1st': '第一', '2nd': '第二', '3rd': '第三',
+                                    'Number': '單複', 'Singular': '單數', 'Plural': '複數',
+                                    'Case': '格位', 'Nominative': '主格', 'Genitive': '屬格', 'Dative': '與格', 'Accusative': '賓格', 'Vocative': '呼格',
+                                    'Gender': '性別', 'Masculine': '陽性', 'Feminine': '陰性', 'Neuter': '中性',
+                                    'Extra': '補充', 'Negative': '否定', 'Interrogative': '疑問', 'Contracted form': '縮寫形式',
+                                    'Name type': '專名類型', 'Person Gentilic': '人名/族名', 'Location Gentilic': '地名/族名', 'Location': '地名', 'Individual': '人名', 'Title': '頭銜',
+                                    'Adj.Numb.': '數字屬性', 'Indeclinable Numeral': '不變形數字',
+                                    'Original language': '原始語言', 'Transcribed from Hebrew': '譯自希伯來文'
+                                };
+                                const transKey = transMap[key.trim()] || key.trim();
+                                const transVal = transMap[val.trim()] || val.trim();
+                                addTag(`${transKey}: ${transVal}`);
+                            } else {
+                                addTag(cleanPart);
+                            }
+                        }
+                    });
+                } else {
+                    // 處理新版 WLC 中文形態學字串，自動按空格或 / 分離
+                    rawCodeOrObj.morphology.split(/[\s/]+/).forEach(part => {
+                        const cleanPart = part.trim();
+                        if (cleanPart && cleanPart !== 'null') {
                             addTag(cleanPart);
                         }
-                    }
-                });
-                
-                if (rawCodeOrObj.pos && !rawCodeOrObj.morphology.includes('Function=')) addTag(`詞性: ${rawCodeOrObj.pos}`);
-                if (rawCodeOrObj.morph_code) addTag(`代碼: ${rawCodeOrObj.morph_code}`);
-                
-                if (tags.length > 0) return tags;
+                    });
+                }
             }
 
-            // 處理 WLC 舊約自訂的 morph_analysis 結構
-            if (rawCodeOrObj && typeof rawCodeOrObj === 'object' && rawCodeOrObj.morph_analysis && rawCodeOrObj.morph_analysis.parts) {
-                rawCodeOrObj.morph_analysis.parts.forEach(part => {
-                    const posMap = {
-                        'noun': '名詞', 'verb': '動詞', 'adjective': '形容詞', 'adverb': '副詞', 
-                        'pronoun': '代名詞', 'preposition': '介系詞', 'conjunction': '連接詞', 
-                        'interjection': '感嘆詞', 'particle': '助詞', 'article': '冠詞'
-                    };
-                    if (part.pos && posMap[part.pos.toLowerCase()]) addTag(`詞性: ${posMap[part.pos.toLowerCase()]}`);
-                    else if (part.pos) addTag(`詞性: ${part.pos}`);
+            // 新版 WLC JSON 支援 part_of_speech
+            if (rawCodeOrObj && rawCodeOrObj.part_of_speech) addTag(`詞性: ${rawCodeOrObj.part_of_speech}`);
+            if (rawCodeOrObj && rawCodeOrObj.pos && (!rawCodeOrObj.morphology || !rawCodeOrObj.morphology.includes('Function='))) addTag(`詞性: ${rawCodeOrObj.pos}`);
+            if (rawCodeOrObj && rawCodeOrObj.morph_code) addTag(`代碼: ${rawCodeOrObj.morph_code}`);
 
-                    const genderMap = { 'masculine': '陽性', 'feminine': '陰性', 'common': '通性' };
-                    if (part.gender && genderMap[part.gender.toLowerCase()]) addTag(genderMap[part.gender.toLowerCase()]);
-                    else if (part.gender) addTag(part.gender);
-
-                    const numMap = { 'singular': '單數', 'plural': '複數', 'dual': '雙數' };
-                    if (part.number && numMap[part.number.toLowerCase()]) addTag(numMap[part.number.toLowerCase()]);
-                    else if (part.number) addTag(part.number);
-
-                    const stateMap = { 'absolute': '絕對態', 'construct': '附屬態' };
-                    if (part.state && stateMap[part.state.toLowerCase()]) addTag(stateMap[part.state.toLowerCase()]);
-
-                    const stemMap = {
-                        'qal': 'Qal(輕)', 'niphal': 'Niphal(被動)', 'piel': 'Piel(強調)', 
-                        'pual': 'Pual(強被)', 'hiphil': 'Hiphil(使役)', 'hophal': 'Hophal(使被)', 'hithpael': 'Hithpael(反身)'
-                    };
-                    if (part.stem && stemMap[part.stem.toLowerCase()]) addTag(`語幹: ${stemMap[part.stem.toLowerCase()]}`);
-
-                    const conjMap = {
-                        'perfect': '完成式', 'imperfect': '未完成式', 'sequential imperfect': '連續未完成式',
-                        'imperative': '祈使語氣', 'infinitive construct': '附屬不定詞', 'infinitive absolute': '絕對不定詞',
-                        'participle': '分詞'
-                    };
-                    if (part.conjugation && conjMap[part.conjugation.toLowerCase()]) addTag(`語氣: ${conjMap[part.conjugation.toLowerCase()]}`);
-                    else if (part.conjugation) addTag(`語氣: ${part.conjugation}`);
-
-                    const personMap = { '1st': '第一人稱', '2nd': '第二人稱', '3rd': '第三人稱' };
-                    if (part.person && personMap[part.person.toLowerCase()]) addTag(personMap[part.person.toLowerCase()]);
-                });
-                
-                if (tags.length > 0) return tags;
-            }
+            if (tags.length > 0) return tags;
 
             // 備用字串解析邏輯 (Fallback)
             let rawCode = '';
@@ -638,40 +603,29 @@
           const [dictResults, setDictResults] = useState([]);
           const [dictTarget, setDictTarget] = useState('dict-wlc-strongs');
           
-          // 記錄使用者點擊單字時的上下文
           const [dictContext, setDictContext] = useState(null);
-
           const [bibleSearchQuery, setBibleSearchQuery] = useState('');
           const [bibleSearchResults, setBibleSearchResults] = useState([]);
 
           const mainRef = useRef(null);
-
-          // 核心：判斷當前書卷是否為舊約，以供自動化切換原文翻譯版本
           const currentIsOT = BIBLE_STRUCTURE.OT.some(b => b.id === viewState.bookId);
 
-          // 🪐 「懸浮觸控滑動艙」
           const [floatPos, setFloatPos] = useState({ x: -100, y: -100 });
           const [isDragging, setIsDragging] = useState(false);
           const dragStart = useRef({ x: 0, y: 0 });
           const currentPos = useRef({ x: 0, y: 0 });
 
-          // 🎉 【優化新增】根據書卷自動更正原文譯本 (防呆機制)
           useEffect(() => {
-              // 1. 自動修正頭部與讀經畫面的下拉選單
               setReadVersion(prev => {
                   if (currentIsOT && prev === 'orig-na28') return 'orig-wlc';
                   if (!currentIsOT && (prev === 'orig-wlc' || prev === 'orig-lxx')) return 'orig-na28';
                   return prev;
               });
-
-              // 2. 自動修正對照頁「左中右」的右格 (水平模式)
               setHorizVersions(prev => {
                   if (currentIsOT && prev.orig === 'orig-na28') return { ...prev, orig: 'orig-wlc' };
                   if (!currentIsOT && (prev.orig === 'orig-wlc' || prev.orig === 'orig-lxx')) return { ...prev, orig: 'orig-na28' };
                   return prev;
               });
-
-              // 3. 自動修正對照頁「上中下」的所有格子 (垂直模式)
               setVerticalSlots(prev => {
                   let changed = false;
                   const next = prev.map(slot => {
@@ -722,9 +676,12 @@
 
           useEffect(() => {
             loadFromDB().then(data => { 
-                // 啟動時：如果偵測到 NA28 形態學數據，自動在記憶體裡生出「NA28 動態字典」
                 if (data['morph-na28']) {
                     data['dict-na28-strongs'] = buildDynamicDict(data['morph-na28']);
+                }
+                // 動態建構 WLC 字典
+                if (data['morph-wlc']) {
+                    data['dict-wlc-strongs'] = buildDynamicDict(data['morph-wlc']);
                 }
                 setLoadedBibles(data); 
                 setAppReady(true); 
@@ -781,8 +738,8 @@
                       setLoadedBibles(prev => { 
                           const next = { ...prev }; 
                           delete next[id]; 
-                          // 如果刪除了形態學，連帶清除動態產生的字典
                           if (id === 'morph-na28') delete next['dict-na28-strongs'];
+                          if (id === 'morph-wlc') delete next['dict-wlc-strongs'];
                           return next; 
                       });
                       setToastMsg(`🗑️ 已成功刪除：${label}`);
@@ -874,7 +831,6 @@
                         const response = await fetch(url);
                         if (!response.ok) throw new Error(`檔案 ${fileOrFiles[i]} 請求失敗`);
                         const json = await response.json();
-                        // 修正致命 Bug: 確保多檔案合併不會把先前的經文覆蓋掉！
                         deepMerge(mergedData, normalizeBibleData(json));
                     }
                 } else {
@@ -895,6 +851,9 @@
                       const next = { ...prev, [importTarget]: finalData };
                       if (importTarget === 'morph-na28') {
                           next['dict-na28-strongs'] = buildDynamicDict(finalData);
+                      }
+                      if (importTarget === 'morph-wlc') {
+                          next['dict-wlc-strongs'] = buildDynamicDict(finalData);
                       }
                       return next;
                   });
@@ -929,6 +888,9 @@
                             if (importTarget === 'morph-na28') {
                                 next['dict-na28-strongs'] = buildDynamicDict(mergedData);
                             }
+                            if (importTarget === 'morph-wlc') {
+                                next['dict-wlc-strongs'] = buildDynamicDict(mergedData);
+                            }
                             return next;
                         });
                         setToastMsg(`✅ ${importTarget.toUpperCase()} 匯入成功`);
@@ -954,7 +916,6 @@
               let results = []; 
               const isHebrewDict = currentDictId.includes('wlc');
               
-              // 從點擊上下文直接提取精確的 Strong's 編號與 Lemma 原型字
               let explicitStrongs = null;
               let explicitLemma = null;
               let explicitGloss = null;
@@ -969,7 +930,6 @@
                   }
                   explicitGloss = contextMorph.gloss || (contextMorph.lexicon && contextMorph.lexicon.gloss);
                   
-                  // 將 <the> 等含有角括號的內容轉換，防止被 HTML 隱藏
                   if (contextMorph.english) {
                       explicitEnglish = String(contextMorph.english).replace(/</g, '&lt;').replace(/>/g, '&gt;');
                   }
@@ -977,28 +937,33 @@
 
               // ============================================
               // 強制保底字典機制 (Highest Priority: Score 2000)
-              // 保證每一個點擊都有翻譯結果，直接把 JSON 裡的 gloss 和 english 轉換成字典結果！
+              // 保證每一個點擊都有翻譯結果，直接把 JSON 裡的定義轉成字典結果！
+              // 支援 WLC 的精準詞義解析
               // ============================================
-              if (contextMorph && (explicitLemma || qClean)) {
+              if (contextMorph && (explicitLemma || contextMorph.text || qClean)) {
                   let sourceName = '內建解析';
                   if (contextMorph.english && !isHebrewDict) sourceName = 'NA28 形態學數據庫';
                   if ((contextMorph.lexicon || isHebrewDict) && contextMorph.gloss) sourceName = 'WLC 形態學數據庫';
+                  if (contextMorph.text) sourceName = 'WLC 精確字義解析'; // WLC 新版
 
                   results.push({
                       lemma: contextMorph.lemma || (contextMorph.lexicon && contextMorph.lexicon.lemma) || query,
-                      strongs: explicitStrongs || '內建',
-                      gloss: explicitGloss || explicitEnglish || '無翻譯',
-                      definition: explicitEnglish ? `<span class="text-indigo-500 mr-1">內建翻譯:</span> ${explicitEnglish}` : '',
+                      word: contextMorph.text || contextMorph.word || '', // 精準對應原字
+                      strongs: explicitStrongs || contextMorph.strongs || '內建',
+                      gloss: contextMorph.gloss || explicitGloss || explicitEnglish || '無翻譯',
+                      definition: contextMorph.definition || (explicitEnglish ? `<span class="text-indigo-500 mr-1">內建翻譯:</span> ${explicitEnglish}` : ''),
+                      strongs_definition: contextMorph.definition || '',
+                      derivation: contextMorph.derivation || '',
+                      transliteration: contextMorph.transliteration || '',
                       score: 2000,
                       isSynthesized: true,
                       source: sourceName,
                       morphology: contextMorph.morphology,
                       morph_code: contextMorph.morph_code,
-                      pos: contextMorph.pos
+                      pos: contextMorph.part_of_speech || contextMorph.pos
                   });
               }
 
-              // 如果連動態字典都沒有，直接返回上面建立的保底結果
               if (!loadedBibles[currentDictId]) {
                   return results;
               }
@@ -1034,7 +999,7 @@
               for (const [key, data] of Object.entries(dict)) {
                   const strongs = String(data.strongs || key).toLowerCase();
                   
-                  const exactWordRaw = data.word ? data.word.toLowerCase() : '';
+                  const exactWordRaw = data.word || data.text ? (data.word || data.text).toLowerCase() : '';
                   const exactWordClean = normalizeFinalForms(removeDiacritics(exactWordRaw));
                   
                   const lemmaRaw = data.lemma ? data.lemma.toLowerCase() : '';
@@ -1047,7 +1012,6 @@
                   
                   let score = 0;
 
-                  // 絕對優先級 (Score: 1000)
                   if (explicitStrongs && strongs) {
                       const eMatch = explicitStrongs.match(/\d+/);
                       const dMatch = strongs.match(/\d+/);
@@ -1056,15 +1020,13 @@
                       }
                   }
                   
-                  // 次高優先級 (Score: 900)
                   if (score === 0 && explicitLemma && lemmaClean === explicitLemma) {
                       score = 900;
                   }
 
-                  // 原本的文字匹配邏輯
                   if (score === 0) {
                       if (exactWordRaw && (exactWordRaw === qRaw || exactWordClean === qClean)) {
-                          score = 150; // Exact word match goes very high!
+                          score = 150; 
                       }
                       else if (strongs === qRaw || lemmaRaw === qRaw || gloss === qRaw || lemmaClean === qClean) {
                           score = 100;
@@ -1129,7 +1091,6 @@
               const uniqueResults = [];
               const seenIds = new Set();
               for (const r of results) {
-                  // 精確的唯一值：若有 index (如 LXX) 就用它，否則採用 strongs, 甚至原文
                   const uniqueKey = r.index ? `idx_${r.index}` : (r.strongs || r.word || r.lemma);
                   if (uniqueKey && !seenIds.has(uniqueKey)) {
                       seenIds.add(uniqueKey);
@@ -1146,13 +1107,10 @@
 
             let activeDict = 'dict-wlc-strongs';
             if (versionConfig === 'orig-lxx') activeDict = 'dict-lxx-strongs';
-            // 自動將新約對應到動態字典
             if (versionConfig === 'orig-na28') activeDict = 'dict-na28-strongs';
             
-            // 先提取該字的詳細形態學資料
             let targetMorphInfo = null;
             if (verseData && wordIndex !== undefined) {
-                // ⚠️ 重大修復：判斷必須依據「使用者點擊的文本 (versionConfig)」，不能單純用 isOT，否則 LXX 查詢會拉到 WLC 的希伯來文
                 let targetMorphDB = null;
                 if (versionConfig === 'orig-wlc') {
                     targetMorphDB = loadedBibles['morph-wlc'];
@@ -1166,13 +1124,15 @@
                         const vData = bData[verseData.chapter][verseData.verseNum];
                         
                         if (Array.isArray(vData)) {
-                             // 嘗試用 index 抓
+                             const checkText = w => {
+                                 const txt = w.text || w.word;
+                                 return txt && txt.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() === clean;
+                             };
                              targetMorphInfo = vData[wordIndex];
-                             // 如果 index 抓出來的字不對，用文字去比對
-                             if (targetMorphInfo && targetMorphInfo.word && targetMorphInfo.word.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() !== clean) {
-                                 targetMorphInfo = vData.find(w => w.word && w.word.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() === clean) || null;
+                             if (targetMorphInfo && !checkText(targetMorphInfo)) {
+                                 targetMorphInfo = vData.find(checkText) || null;
                              } else if (!targetMorphInfo) {
-                                 targetMorphInfo = vData.find(w => w.word && w.word.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() === clean) || null;
+                                 targetMorphInfo = vData.find(checkText) || null;
                              }
                         } else {
                             targetMorphInfo = vData[wordIndex] || vData[String(wordIndex)];
@@ -1181,7 +1141,6 @@
                 }
             }
             
-            // 記錄點擊的上下文，供動態形態學資料庫查找
             if (verseData && wordIndex !== undefined) {
                 setDictContext({
                     word: clean,
@@ -1191,7 +1150,7 @@
                     verseNum: verseData.verseNum,
                     wordIndex: wordIndex,
                     isOT: verseData.isOT,
-                    version: versionConfig // 記錄真正點擊的是哪一本
+                    version: versionConfig
                 });
             } else {
                 setDictContext(null);
@@ -1199,7 +1158,6 @@
 
             setDictTarget(activeDict);
             setDictQuery(clean); 
-            // 將 targetMorphInfo 傳給搜尋引擎，鎖定 100% 精確匹配！
             setDictResults(executeDictSearch(clean, activeDict, targetMorphInfo)); 
             setDictOpen(true);
           };
@@ -1243,7 +1201,6 @@
               try {
                   const { bookId, chapter, verseNum, wordIndex, version } = dictContext;
                   
-                  // 根據剛剛點擊的譯本來抓對應的文法資料庫，防止 LXX 誤用 WLC
                   let targetMorphDB = null;
                   if (version === 'orig-wlc') targetMorphDB = loadedBibles['morph-wlc'];
                   if (version === 'orig-na28') targetMorphDB = loadedBibles['morph-na28'];
@@ -1261,12 +1218,15 @@
 
                   let morphInfo = null;
                   if (Array.isArray(verseData)) {
+                      const checkText = w => {
+                          const txt = w.text || w.word;
+                          return txt && txt.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() === dictContext.word;
+                      };
                       morphInfo = verseData[wordIndex];
-                      // 加入容錯比對
-                      if (morphInfo && morphInfo.word && morphInfo.word.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() !== dictContext.word) {
-                          morphInfo = verseData.find(w => w.word && w.word.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() === dictContext.word) || null;
+                      if (morphInfo && !checkText(morphInfo)) {
+                          morphInfo = verseData.find(checkText) || null;
                       } else if (!morphInfo) {
-                          morphInfo = verseData.find(w => w.word && w.word.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() === dictContext.word) || null;
+                          morphInfo = verseData.find(checkText) || null;
                       }
                   } else if (typeof verseData === 'object') {
                       morphInfo = verseData[wordIndex] || verseData[String(wordIndex)];
@@ -1384,7 +1344,7 @@
                                                         </span>
                                                     ))}
                                                 </div>
-                                                {/* 支援 NA28 形態學資料中的 lemma 或 lexicon.lemma */}
+                                                {/* 支援 NA28 形態學資料中的 lemma 或新版 WLC */}
                                                 {typeof contextMorph === 'object' && (contextMorph.lemma || (contextMorph.lexicon && contextMorph.lexicon.lemma)) && (
                                                     <div className="mt-2 text-xs font-medium text-slate-500 dark:text-slate-400 relative z-10">
                                                         原型字: <span className="font-bold text-slate-700 dark:text-slate-300">{contextMorph.lemma || contextMorph.lexicon.lemma}</span>
@@ -1416,8 +1376,8 @@
                                           <div className="flex justify-between items-start mb-2">
                                              <div className="flex items-center gap-2">
                                                 <span className="text-sm font-black text-indigo-700 dark:text-indigo-400">
-                                                    {r.word ? (
-                                                        <Fragment>{r.word} {r.lemma && <span className="text-[11px] font-normal text-indigo-500 ml-1">({r.lemma})</span>}</Fragment>
+                                                    {r.word || r.text ? (
+                                                        <Fragment>{r.word || r.text} {r.lemma && <span className="text-[11px] font-normal text-indigo-500 ml-1">({r.lemma})</span>}</Fragment>
                                                     ) : (
                                                         r.lemma || r.strongs
                                                     )}
@@ -1635,9 +1595,9 @@
                                                </select>
                                             </div>
                                             <div className="flex-1 w-full">
-                                               {slot.startsWith('orig') ? renderOriginal(verse, slot, fontSize, false) : (
-                                                  <p style={{ fontSize: `${fontSize}px` }} className={`w-full ${slot.startsWith('en') ? 'italic font-serif text-slate-600 dark:text-slate-400' : 'font-bold text-slate-800 dark:text-slate-200'} leading-relaxed`}>{getVerseText(verse, slot)}</p>
-                                               )}
+                                                {slot.startsWith('orig') ? renderOriginal(verse, slot, fontSize, false) : (
+                                                   <p style={{ fontSize: `${fontSize}px` }} className={`w-full ${slot.startsWith('en') ? 'italic font-serif text-slate-600 dark:text-slate-400' : 'font-bold text-slate-800 dark:text-slate-200'} leading-relaxed`}>{getVerseText(verse, slot)}</p>
+                                                )}
                                             </div>
                                          </div>
                                       ))}
@@ -1772,10 +1732,8 @@
                                   { id: 'zh-cuv', label: '和合本 (CUV)' }, { id: 'zh-lzz', label: '呂振中 (LZZ)' }, { id: 'zh-ncv', label: '新譯本 (NCV)' },
                                   { id: 'en-niv', label: 'NIV' }, { id: 'en-nasb', label: 'NASB' }, { id: 'en-kjv', label: 'KJV' },
                                   { id: 'orig-wlc', label: 'WLC 原文 (希伯來文)' }, { id: 'orig-lxx', label: 'LXX 譯本 (希臘文)' }, { id: 'orig-na28', label: 'NA28 新約 (希臘文)' },
-                                  { id: 'dict-wlc-strongs', label: 'WLC 希伯來字典' },
                                   { id: 'dict-lxx-strongs', label: 'LXX 七十士字典' },
-                                  // 🎉 已刪除過時的 NA28 字典選項
-                                  { id: 'morph-wlc', label: 'WLC 形態學數據庫 (13檔)' },
+                                  { id: 'morph-wlc', label: 'WLC 精確字義與形態學 (11檔)' },
                                   { id: 'morph-na28', label: 'NA28 形態學數據庫 (3檔)' }
                                 ].map(ver => (
                                    <div key={ver.id} className="flex justify-between items-center text-xs p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 transition-colors">
@@ -1811,10 +1769,8 @@
                                    <option value="orig-wlc">匯入為：WLC 原文 (希伯來文)</option>
                                    <option value="orig-lxx">匯入為：LXX 七十士譯本 (希臘文)</option>
                                    <option value="orig-na28">匯入為：NA28 新約原文 (希臘文)</option>
-                                   <option value="dict-wlc-strongs">匯入為：WLC 希伯來字典 (wlc_hebrew_dictionary.json)</option>
                                    <option value="dict-lxx-strongs">匯入為：LXX 七十士字典 (lxx_dictionary.json)</option>
-                                   {/* 🎉 已從下載清單中刪除過時的 NA28 字典 */}
-                                   <option value="morph-wlc">匯入為：WLC 形態學與文法資料庫 (共 13 個分割檔)</option>
+                                   <option value="morph-wlc">匯入為：WLC 精確字義與形態學 (共 11 個分割檔)</option>
                                    <option value="morph-na28">匯入為：NA28 新約形態學與文法資料庫 (共 3 個分割檔)</option>
                                 </select>
                                 
