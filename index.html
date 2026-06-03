@@ -342,18 +342,25 @@
         const normalizeBibleData = (rawJson) => {
             const result = {}; 
             
-            // 檢查是否為字典 (Strongs)
-            if (rawJson && typeof rawJson === 'object' && !Array.isArray(rawJson)) {
-                const keys = Object.keys(rawJson);
-                if (keys.length > 0 && /^[GH]\d+/.test(keys[0])) return rawJson;
-            }
-            if (Array.isArray(rawJson) && rawJson.length > 0 && (rawJson[0].strongs || rawJson[0].lemma || rawJson[0].definition || rawJson[0].gloss)) {
+            // 檢查是否為字典 (Strongs/Lexicon array)
+            // 修改：精準支援包含 index, word, english 的 LXX 字典格式，並防止相同鍵被覆蓋
+            if (Array.isArray(rawJson) && rawJson.length > 0 && (rawJson[0].strongs !== undefined || rawJson[0].lemma !== undefined || rawJson[0].definition !== undefined || rawJson[0].gloss !== undefined || rawJson[0].english !== undefined)) {
                 const dictObj = {};
-                rawJson.forEach(item => {
-                    const key = item.strongs || item.lemma || item.id;
+                rawJson.forEach((item, idx) => {
+                    let key = item.index ? `idx_${item.index}` : (item.strongs || item.lemma || item.id || `item_${idx}`);
+                    // 避免覆蓋原本已存在的 key (除非是保證唯一的 index)
+                    if (dictObj[key] && !item.index) {
+                        key = `${key}_${idx}`;
+                    }
                     if (key) dictObj[key] = item;
                 });
                 return dictObj;
+            }
+
+            // 支援傳入是 Object 的傳統字典
+            if (rawJson && typeof rawJson === 'object' && !Array.isArray(rawJson)) {
+                const keys = Object.keys(rawJson);
+                if (keys.length > 0 && /^[GH]\d+/.test(keys[0])) return rawJson;
             }
 
             const allBooks = [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT];
@@ -483,7 +490,7 @@
             let tags = [];
             const addTag = (tag) => { if (tag && !tags.includes(tag)) tags.push(tag); };
 
-            // 處理 NA28 新格式 (如 "Function=Verb; Tense=Present; Voice=Active")
+            // 處理 NA28 / LXX 新格式 (如 "Function=Verb; Tense=Present; Voice=Active")
             if (rawCodeOrObj && rawCodeOrObj.morphology && typeof rawCodeOrObj.morphology === 'string' && rawCodeOrObj.morphology.includes('=')) {
                 rawCodeOrObj.morphology.split(';').forEach(part => {
                     const cleanPart = part.trim();
@@ -496,7 +503,7 @@
                                 'Voice': '語態', 'Active': '主動', 'Passive': '被動', 'Middle': '關身', 'Middle Deponent': '關身異態', 'Passive Deponent': '被動異態', 'Middle or Passive Deponent': '關/被異態', 'Middle or Passive': '關身或被動',
                                 'Mood': '語氣', 'Indicative': '直陳', 'Subjunctive': '假設', 'Imperative': '祈使', 
                                 'Form': '形式', 'Participle': '分詞', 'Infinitive': '不定詞',
-                                'Person': '人稱', '1st': '第一', '2nd': '第二', '3rd': '第三',
+                                'Person': '人稱', '1st Person': '第一人稱', '2nd Person': '第二人稱', '3rd Person': '第三人稱', '1st': '第一', '2nd': '第二', '3rd': '第三',
                                 'Number': '單複', 'Singular': '單數', 'Plural': '複數',
                                 'Case': '格位', 'Nominative': '主格', 'Genitive': '屬格', 'Dative': '與格', 'Accusative': '賓格', 'Vocative': '呼格',
                                 'Gender': '性別', 'Masculine': '陽性', 'Feminine': '陰性', 'Neuter': '中性',
@@ -1026,17 +1033,22 @@
               
               for (const [key, data] of Object.entries(dict)) {
                   const strongs = String(data.strongs || key).toLowerCase();
+                  
+                  const exactWordRaw = data.word ? data.word.toLowerCase() : '';
+                  const exactWordClean = normalizeFinalForms(removeDiacritics(exactWordRaw));
+                  
                   const lemmaRaw = data.lemma ? data.lemma.toLowerCase() : '';
                   const lemmaClean = normalizeFinalForms(removeDiacritics(lemmaRaw));
                   
                   const strongDef = data.strongs_definition ? data.strongs_definition.toLowerCase() : '';
                   const htmlDef = data.definition ? data.definition.toLowerCase() : '';
-                  const gloss = data.gloss ? data.gloss.toLowerCase() : '';
+                  
+                  const gloss = data.gloss ? data.gloss.toLowerCase() : (data.english ? data.english.toLowerCase() : '');
                   
                   let score = 0;
 
                   // 絕對優先級 (Score: 1000)
-                  if (explicitStrongs) {
+                  if (explicitStrongs && strongs) {
                       const eMatch = explicitStrongs.match(/\d+/);
                       const dMatch = strongs.match(/\d+/);
                       if (eMatch && dMatch && eMatch[0] === dMatch[0]) {
@@ -1051,10 +1063,13 @@
 
                   // 原本的文字匹配邏輯
                   if (score === 0) {
-                      if (strongs === qRaw || lemmaRaw === qRaw || gloss === qRaw || lemmaClean === qClean) {
+                      if (exactWordRaw && (exactWordRaw === qRaw || exactWordClean === qClean)) {
+                          score = 150; // Exact word match goes very high!
+                      }
+                      else if (strongs === qRaw || lemmaRaw === qRaw || gloss === qRaw || lemmaClean === qClean) {
                           score = 100;
                       } 
-                      else if (variantsArr.includes(lemmaClean)) {
+                      else if (variantsArr.includes(lemmaClean) || (exactWordClean && variantsArr.includes(exactWordClean))) {
                           score = 95;
                       }
                   }
@@ -1104,16 +1119,20 @@
 
               results.sort((a, b) => {
                   if (b.score !== a.score) return b.score - a.score;
-                  const aLenDiff = Math.abs((a.lemma || '').length - qRaw.length);
-                  const bLenDiff = Math.abs((b.lemma || '').length - qRaw.length);
+                  const aLen = a.word ? a.word.length : (a.lemma || '').length;
+                  const bLen = b.word ? b.word.length : (b.lemma || '').length;
+                  const aLenDiff = Math.abs(aLen - qRaw.length);
+                  const bLenDiff = Math.abs(bLen - qRaw.length);
                   return aLenDiff - bLenDiff;
               });
 
               const uniqueResults = [];
-              const seenStrongs = new Set();
+              const seenIds = new Set();
               for (const r of results) {
-                  if (!seenStrongs.has(r.strongs)) {
-                      seenStrongs.add(r.strongs);
+                  // 精確的唯一值：若有 index (如 LXX) 就用它，否則採用 strongs, 甚至原文
+                  const uniqueKey = r.index ? `idx_${r.index}` : (r.strongs || r.word || r.lemma);
+                  if (uniqueKey && !seenIds.has(uniqueKey)) {
+                      seenIds.add(uniqueKey);
                       uniqueResults.push(r);
                       if (uniqueResults.length >= 30) break;
                   }
@@ -1133,7 +1152,14 @@
             // 先提取該字的詳細形態學資料
             let targetMorphInfo = null;
             if (verseData && wordIndex !== undefined) {
-                const targetMorphDB = verseData.isOT ? loadedBibles['morph-wlc'] : loadedBibles['morph-na28'];
+                // ⚠️ 重大修復：判斷必須依據「使用者點擊的文本 (versionConfig)」，不能單純用 isOT，否則 LXX 查詢會拉到 WLC 的希伯來文
+                let targetMorphDB = null;
+                if (versionConfig === 'orig-wlc') {
+                    targetMorphDB = loadedBibles['morph-wlc'];
+                } else if (versionConfig === 'orig-na28') {
+                    targetMorphDB = loadedBibles['morph-na28'];
+                }
+                
                 if (targetMorphDB) {
                     const bData = targetMorphDB[verseData.bookId];
                     if (bData && bData[verseData.chapter] && bData[verseData.chapter][verseData.verseNum]) {
@@ -1164,7 +1190,8 @@
                     chapter: verseData.chapter,
                     verseNum: verseData.verseNum,
                     wordIndex: wordIndex,
-                    isOT: verseData.isOT // 記錄是新約還是舊約，以決定找哪個形態庫
+                    isOT: verseData.isOT,
+                    version: versionConfig // 記錄真正點擊的是哪一本
                 });
             } else {
                 setDictContext(null);
@@ -1214,8 +1241,12 @@
               if (!dictContext) return null;
               
               try {
-                  const { bookId, chapter, verseNum, wordIndex, isOT } = dictContext;
-                  const targetMorphDB = isOT ? loadedBibles['morph-wlc'] : loadedBibles['morph-na28'];
+                  const { bookId, chapter, verseNum, wordIndex, version } = dictContext;
+                  
+                  // 根據剛剛點擊的譯本來抓對應的文法資料庫，防止 LXX 誤用 WLC
+                  let targetMorphDB = null;
+                  if (version === 'orig-wlc') targetMorphDB = loadedBibles['morph-wlc'];
+                  if (version === 'orig-na28') targetMorphDB = loadedBibles['morph-na28'];
                   
                   if (!targetMorphDB) return null;
                   
@@ -1384,10 +1415,16 @@
                                           )}
                                           <div className="flex justify-between items-start mb-2">
                                              <div className="flex items-center gap-2">
-                                                <span className="text-sm font-black text-indigo-700 dark:text-indigo-400">{r.lemma}</span>
-                                                <span className="text-xs italic text-amber-600 dark:text-amber-500">{r.transliteration || r.gloss}</span>
+                                                <span className="text-sm font-black text-indigo-700 dark:text-indigo-400">
+                                                    {r.word ? (
+                                                        <Fragment>{r.word} {r.lemma && <span className="text-[11px] font-normal text-indigo-500 ml-1">({r.lemma})</span>}</Fragment>
+                                                    ) : (
+                                                        r.lemma || r.strongs
+                                                    )}
+                                                </span>
+                                                <span className="text-xs italic text-amber-600 dark:text-amber-500">{r.transliteration || r.gloss || r.english}</span>
                                              </div>
-                                             <span className="text-[10px] font-black bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-500">{r.strongs}</span>
+                                             <span className="text-[10px] font-black bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-500">{r.strongs || '無編號'}</span>
                                           </div>
                                           
                                           {(() => {
@@ -1414,7 +1451,7 @@
                                           {r.definition && <div className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed mt-1" dangerouslySetInnerHTML={{ __html: r.definition.includes('<span') ? r.definition : `<span class="text-slate-400 font-normal mr-1">定義:</span> ${r.definition}` }} />}
                                           {r.derivation && r.derivation.toUpperCase() !== 'N/A' && r.derivation.toUpperCase() !== 'NONE' && <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mt-1"><span className="font-normal mr-1">字源:</span> {r.derivation}</p>}
                                           {r.kjv_definition && <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mt-1"><span className="font-normal mr-1">KJV:</span> {r.kjv_definition}</p>}
-                                          {r.gloss && !r.strongs_definition && (!r.definition || r.isSynthesized) && <p className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed mt-1"><span className="text-slate-400 font-normal mr-1">簡義:</span> {r.gloss}</p>}
+                                          {(r.gloss || r.english) && !r.strongs_definition && (!r.definition || r.isSynthesized) && <p className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed mt-1"><span className="text-slate-400 font-normal mr-1">簡義:</span> {r.gloss || r.english}</p>}
                                        </div>
                                    ))}
                                 </div>
