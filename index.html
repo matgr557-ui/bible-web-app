@@ -34,7 +34,7 @@
         };
     </script>
     <style>
-        body { background-color: #f8fafc; color: #0f172a; }
+        body { background-color: #f8fafc; color: #0f172a; margin: 0; padding: 0; overflow: hidden; }
         .dark body { background-color: #0f172a; color: #f8fafc; }
         /* 隱藏捲軸但保持可捲動 */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -45,6 +45,9 @@
         .dark ::-webkit-scrollbar-thumb:hover { background: #64748b; }
         .hebrew-text { font-family: 'SBL Hebrew', 'Ezra SIL', 'Taamey Frank CLM', serif; direction: rtl; }
         .greek-text { font-family: 'SBL Greek', 'Galatia SIL', serif; }
+        .word-hover { transition: all 0.2s; cursor: pointer; border-radius: 4px; padding: 0 2px; }
+        .word-hover:hover { background-color: #e2e8f0; }
+        .dark .word-hover:hover { background-color: #334155; }
     </style>
 </head>
 <body>
@@ -70,74 +73,42 @@
 
         const BIBLE_STRUCTURE = {
             OT: [
-                { id: "GEN", name: "創世記", abbr: "創", en: "Genesis", chapters: 50 },
-                { id: "EXO", name: "出埃及記", abbr: "出", en: "Exodus", chapters: 40 },
-                { id: "LEV", name: "利未記", abbr: "利", en: "Leviticus", chapters: 27 },
-                { id: "NUM", name: "民數記", abbr: "民", en: "Numbers", chapters: 36 },
-                { id: "DEU", name: "申命記", abbr: "申", en: "Deuteronomy", chapters: 34 },
-                { id: "JOS", name: "約書亞記", abbr: "書", en: "Joshua", chapters: 24 },
-                { id: "JDG", name: "士師記", abbr: "士", en: "Judges", chapters: 21 },
-                { id: "RUT", name: "路得記", abbr: "得", en: "Ruth", chapters: 4 },
-                { id: "1SA", name: "撒母耳記上", abbr: "撒上", en: "1 Samuel", chapters: 31 },
-                { id: "2SA", name: "撒母耳記下", abbr: "撒下", en: "2 Samuel", chapters: 24 },
-                { id: "1KI", name: "列王紀上", abbr: "王上", en: "1 Kings", chapters: 22 },
-                { id: "2KI", name: "列王紀下", abbr: "王下", en: "2 Kings", chapters: 25 },
-                { id: "1CH", name: "歷代志上", abbr: "代上", en: "1 Chronicles", chapters: 29 },
-                { id: "2CH", name: "歷代志下", abbr: "代下", en: "2 Chronicles", chapters: 36 },
-                { id: "EZR", name: "以斯拉記", abbr: "拉", en: "Ezra", chapters: 10 },
-                { id: "NEH", name: "尼希米記", abbr: "尼", en: "Nehemiah", chapters: 13 },
-                { id: "EST", name: "以斯帖記", abbr: "斯", en: "Esther", chapters: 10 },
-                { id: "JOB", name: "約伯記", abbr: "伯", en: "Job", chapters: 42 },
-                { id: "PSA", name: "詩篇", abbr: "詩", en: "Psalms", chapters: 150 },
-                { id: "PRO", name: "箴言", abbr: "箴", en: "Proverbs", chapters: 31 },
-                { id: "ECC", name: "傳道書", abbr: "傳", en: "Ecclesiastes", chapters: 12 },
-                { id: "SNG", name: "雅歌", abbr: "歌", en: "Song of Solomon", chapters: 8 },
-                { id: "ISA", name: "以賽亞書", abbr: "賽", en: "Isaiah", chapters: 66 },
-                { id: "JER", name: "耶利米書", abbr: "耶", en: "Jeremiah", chapters: 52 },
-                { id: "LAM", name: "耶利米哀歌", abbr: "哀", en: "Lamentations", chapters: 5 },
-                { id: "EZK", name: "以西結書", abbr: "結", en: "Ezekiel", chapters: 48 },
-                { id: "DAN", name: "但以理書", abbr: "但", en: "Daniel", chapters: 12 },
-                { id: "HOS", name: "何西阿書", abbr: "何", en: "Hosea", chapters: 14 },
-                { id: "JOL", name: "約珥書", abbr: "珥", en: "Joel", chapters: 3 },
-                { id: "AMO", name: "阿摩司書", abbr: "摩", en: "Amos", chapters: 9 },
-                { id: "OBA", name: "俄巴底亞書", abbr: "俄", en: "Obadiah", chapters: 1 },
-                { id: "JON", name: "約拿書", abbr: "拿", en: "Jonah", chapters: 4 },
-                { id: "MIC", name: "彌迦書", abbr: "彌", en: "Micah", chapters: 7 },
-                { id: "NAM", name: "那鴻書", abbr: "鴻", en: "Nahum", chapters: 3 },
-                { id: "HAB", name: "哈巴谷書", abbr: "哈", en: "Habakkuk", chapters: 3 },
-                { id: "ZEP", name: "西番雅書", abbr: "番", en: "Zephaniah", chapters: 3 },
-                { id: "HAG", name: "哈該書", abbr: "該", en: "Haggai", chapters: 2 },
-                { id: "ZEC", name: "撒迦利亞書", abbr: "亞", en: "Zechariah", chapters: 14 },
-                { id: "MAL", name: "瑪拉基書", abbr: "瑪", en: "Malachi", chapters: 4 }
+                { id: "GEN", name: "創世記", abbr: "創", chapters: 50 }, { id: "EXO", name: "出埃及記", abbr: "出", chapters: 40 },
+                { id: "LEV", name: "利未記", abbr: "利", chapters: 27 }, { id: "NUM", name: "民數記", abbr: "民", chapters: 36 },
+                { id: "DEU", name: "申命記", abbr: "申", chapters: 34 }, { id: "JOS", name: "約書亞記", abbr: "書", chapters: 24 },
+                { id: "JDG", name: "士師記", abbr: "士", chapters: 21 }, { id: "RUT", name: "路得記", abbr: "得", chapters: 4 },
+                { id: "1SA", name: "撒母耳記上", abbr: "撒上", chapters: 31 }, { id: "2SA", name: "撒母耳記下", abbr: "撒下", chapters: 24 },
+                { id: "1KI", name: "列王紀上", abbr: "王上", chapters: 22 }, { id: "2KI", name: "列王紀下", abbr: "王下", chapters: 25 },
+                { id: "1CH", name: "歷代志上", abbr: "代上", chapters: 29 }, { id: "2CH", name: "歷代志下", abbr: "代下", chapters: 36 },
+                { id: "EZR", name: "以斯拉記", abbr: "拉", chapters: 10 }, { id: "NEH", name: "尼希米記", abbr: "尼", chapters: 13 },
+                { id: "EST", name: "以斯帖記", abbr: "斯", chapters: 10 }, { id: "JOB", name: "約伯記", abbr: "伯", chapters: 42 },
+                { id: "PSA", name: "詩篇", abbr: "詩", chapters: 150 }, { id: "PRO", name: "箴言", abbr: "箴", chapters: 31 },
+                { id: "ECC", name: "傳道書", abbr: "傳", chapters: 12 }, { id: "SNG", name: "雅歌", abbr: "歌", chapters: 8 },
+                { id: "ISA", name: "以賽亞書", abbr: "賽", chapters: 66 }, { id: "JER", name: "耶利米書", abbr: "耶", chapters: 52 },
+                { id: "LAM", name: "耶利米哀歌", abbr: "哀", chapters: 5 }, { id: "EZK", name: "以西結書", abbr: "結", chapters: 48 },
+                { id: "DAN", name: "但以理書", abbr: "但", chapters: 12 }, { id: "HOS", name: "何西阿書", abbr: "何", chapters: 14 },
+                { id: "JOL", name: "約珥書", abbr: "珥", chapters: 3 }, { id: "AMO", name: "阿摩司書", abbr: "摩", chapters: 9 },
+                { id: "OBA", name: "俄巴底亞書", abbr: "俄", chapters: 1 }, { id: "JON", name: "約拿書", abbr: "拿", chapters: 4 },
+                { id: "MIC", name: "彌迦書", abbr: "彌", chapters: 7 }, { id: "NAM", name: "那鴻書", abbr: "鴻", chapters: 3 },
+                { id: "HAB", name: "哈巴谷書", abbr: "哈", chapters: 3 }, { id: "ZEP", name: "西番雅書", abbr: "番", chapters: 3 },
+                { id: "HAG", name: "哈該書", abbr: "該", chapters: 2 }, { id: "ZEC", name: "撒迦利亞書", abbr: "亞", chapters: 14 },
+                { id: "MAL", name: "瑪拉基書", abbr: "瑪", chapters: 4 }
             ],
             NT: [
-                { id: "MAT", name: "馬太福音", abbr: "太", en: "Matthew", chapters: 28 },
-                { id: "MRK", name: "馬可福音", abbr: "可", en: "Mark", chapters: 16 },
-                { id: "LUK", name: "路加福音", abbr: "路", en: "Luke", chapters: 24 },
-                { id: "JHN", name: "約翰福音", abbr: "約", en: "John", chapters: 21 },
-                { id: "ACT", name: "使徒行傳", abbr: "徒", en: "Acts", chapters: 28 },
-                { id: "ROM", name: "羅馬書", abbr: "羅", en: "Romans", chapters: 16 },
-                { id: "1CO", name: "哥林多前書", abbr: "林前", en: "1 Corinthians", chapters: 16 },
-                { id: "2CO", name: "哥林多後書", abbr: "林後", en: "2 Corinthians", chapters: 13 },
-                { id: "GAL", name: "加拉太書", abbr: "加", en: "Galatians", chapters: 6 },
-                { id: "EPH", name: "以弗所書", abbr: "弗", en: "Ephesians", chapters: 6 },
-                { id: "PHP", name: "腓立比書", abbr: "腓", en: "Philippians", chapters: 4 },
-                { id: "COL", name: "歌羅西書", abbr: "西", en: "Colossians", chapters: 4 },
-                { id: "1TH", name: "帖撒羅尼迦前書", abbr: "帖前", en: "1 Thessalonians", chapters: 5 },
-                { id: "2TH", name: "帖撒羅尼迦後書", abbr: "帖後", en: "2 Thessalonians", chapters: 3 },
-                { id: "1TI", name: "提摩太前書", abbr: "提前", en: "1 Timothy", chapters: 6 },
-                { id: "2TI", name: "提摩太後書", abbr: "提後", en: "2 Timothy", chapters: 4 },
-                { id: "TIT", name: "提多書", abbr: "多", en: "Titus", chapters: 3 },
-                { id: "PHM", name: "腓利門書", abbr: "門", en: "Philemon", chapters: 1 },
-                { id: "HEB", name: "希伯來書", abbr: "來", en: "Hebrews", chapters: 13 },
-                { id: "JAS", name: "雅各書", abbr: "雅", en: "James", chapters: 5 },
-                { id: "1PE", name: "彼得前書", abbr: "彼前", en: "1 Peter", chapters: 5 },
-                { id: "2PE", name: "彼得後書", abbr: "彼後", en: "2 Peter", chapters: 3 },
-                { id: "1JN", name: "約翰一書", abbr: "約一", en: "1 John", chapters: 5 },
-                { id: "2JN", name: "約翰二書", abbr: "約二", en: "2 John", chapters: 1 },
-                { id: "3JN", name: "約翰三書", abbr: "約三", en: "3 John", chapters: 1 },
-                { id: "JUD", name: "猶大書", abbr: "猶", en: "Jude", chapters: 1 },
-                { id: "REV", name: "啟示錄", abbr: "啟", en: "Revelation", chapters: 22 }
+                { id: "MAT", name: "馬太福音", abbr: "太", chapters: 28 }, { id: "MRK", name: "馬可福音", abbr: "可", chapters: 16 },
+                { id: "LUK", name: "路加福音", abbr: "路", chapters: 24 }, { id: "JHN", name: "約翰福音", abbr: "約", chapters: 21 },
+                { id: "ACT", name: "使徒行傳", abbr: "徒", chapters: 28 }, { id: "ROM", name: "羅馬書", abbr: "羅", chapters: 16 },
+                { id: "1CO", name: "哥林多前書", abbr: "林前", chapters: 16 }, { id: "2CO", name: "哥林多後書", abbr: "林後", chapters: 13 },
+                { id: "GAL", name: "加拉太書", abbr: "加", chapters: 6 }, { id: "EPH", name: "以弗所書", abbr: "弗", chapters: 6 },
+                { id: "PHP", name: "腓立比書", abbr: "腓", chapters: 4 }, { id: "COL", name: "歌羅西書", abbr: "西", chapters: 4 },
+                { id: "1TH", name: "帖撒羅尼迦前書", abbr: "帖前", chapters: 5 }, { id: "2TH", name: "帖撒羅尼迦後書", abbr: "帖後", chapters: 3 },
+                { id: "1TI", name: "提摩太前書", abbr: "提前", chapters: 6 }, { id: "2TI", name: "提摩太後書", abbr: "提後", chapters: 4 },
+                { id: "TIT", name: "提多書", abbr: "多", chapters: 3 }, { id: "PHM", name: "腓利門書", abbr: "門", chapters: 1 },
+                { id: "HEB", name: "希伯來書", abbr: "來", chapters: 13 }, { id: "JAS", name: "雅各書", abbr: "雅", chapters: 5 },
+                { id: "1PE", name: "彼得前書", abbr: "彼前", chapters: 5 }, { id: "2PE", name: "彼得後書", abbr: "彼後", chapters: 3 },
+                { id: "1JN", name: "約翰一書", abbr: "約一", chapters: 5 }, { id: "2JN", name: "約翰二書", abbr: "約二", chapters: 1 },
+                { id: "3JN", name: "約翰三書", abbr: "約三", chapters: 1 }, { id: "JUD", name: "猶大書", abbr: "猶", chapters: 1 },
+                { id: "REV", name: "啟示錄", abbr: "啟", chapters: 22 }
             ]
         };
 
@@ -162,9 +133,8 @@
 
             const [dictQuery, setDictQuery] = useState('');
             const [dictTarget, setDictTarget] = useState('dict-wlc-strongs');
-            const [dictContext, setDictContext] = useState(null); // { word, bookId, chapter, verseNum, versionConfig }
-
-            const contentRef = useRef(null);
+            const [dictContext, setDictContext] = useState(null); 
+            const [sidebarOpen, setSidebarOpen] = useState(true);
 
             // --- 🤖 智慧連動：新舊約判斷與版本自動切換 ---
             const isOldTestament = (bookId) => {
@@ -175,14 +145,14 @@
                 const checkAndAutoSwitchVersion = () => {
                     const isOT = isOldTestament(currentVerse.bookId);
                     
-                    // 檢查版本 2
+                    // 自動修正版本 2
                     if (isOT && version2 === 'orig-na28') {
                         setVersion2('orig-wlc');
                     } else if (!isOT && (version2 === 'orig-wlc' || version2 === 'orig-lxx')) {
                         setVersion2('orig-na28');
                     }
 
-                    // 檢查版本 3
+                    // 自動修正版本 3
                     if (version3 !== 'none') {
                         if (isOT && version3 === 'orig-na28') {
                             setVersion3('orig-wlc');
@@ -196,18 +166,16 @@
                         }
                     }
                 };
-                
                 checkAndAutoSwitchVersion();
-            }, [currentVerse.bookId, version2, version3]);
+            }, [currentVerse.bookId]); // 只有當章節書卷改變時才自動切換
 
-            // --- 🧠 智慧文法與詞性解析引擎 (Morphology Parser) ---
             const parseMorphologyTags = (rawCodeOrObj) => {
                 if (!rawCodeOrObj) return [];
                 
                 let tags = [];
                 const addTag = (tag) => { if (tag && !tags.includes(tag)) tags.push(tag); };
 
-                // NA28 新格式處理 (如 "Function=Verb; Tense=Present; Voice=Active")
+                // 處理 NA28 新格式
                 if (rawCodeOrObj && rawCodeOrObj.morphology && typeof rawCodeOrObj.morphology === 'string' && rawCodeOrObj.morphology.includes('=')) {
                     rawCodeOrObj.morphology.split(';').forEach(part => {
                         const cleanPart = part.trim();
@@ -244,42 +212,27 @@
                     if (tags.length > 0) return tags;
                 }
 
-                // 自訂 morph_analysis 結構處理
+                // 處理自訂 morph_analysis 結構 (WLC/LXX)
                 if (rawCodeOrObj && typeof rawCodeOrObj === 'object' && rawCodeOrObj.morph_analysis && rawCodeOrObj.morph_analysis.parts) {
                     rawCodeOrObj.morph_analysis.parts.forEach(part => {
-                        const posMap = {
-                            'noun': '名詞', 'verb': '動詞', 'adjective': '形容詞', 'adverb': '副詞', 
-                            'pronoun': '代名詞', 'preposition': '介系詞', 'conjunction': '連接詞', 
-                            'interjection': '感嘆詞', 'particle': '助詞', 'article': '冠詞'
-                        };
-                        if (part.pos && posMap[part.pos.toLowerCase()]) addTag(`詞性: ${posMap[part.pos.toLowerCase()]}`);
-                        else if (part.pos) addTag(`詞性: ${part.pos}`);
-
+                        const posMap = { 'noun': '名詞', 'verb': '動詞', 'adjective': '形容詞', 'adverb': '副詞', 'pronoun': '代名詞', 'preposition': '介系詞', 'conjunction': '連接詞', 'interjection': '感嘆詞', 'particle': '助詞', 'article': '冠詞' };
+                        if (part.pos && posMap[part.pos.toLowerCase()]) addTag(`詞性: ${posMap[part.pos.toLowerCase()]}`); else if (part.pos) addTag(`詞性: ${part.pos}`);
+                        
                         const genderMap = { 'masculine': '陽性', 'feminine': '陰性', 'common': '通性' };
-                        if (part.gender && genderMap[part.gender.toLowerCase()]) addTag(genderMap[part.gender.toLowerCase()]);
-                        else if (part.gender) addTag(part.gender);
-
+                        if (part.gender && genderMap[part.gender.toLowerCase()]) addTag(genderMap[part.gender.toLowerCase()]); else if (part.gender) addTag(part.gender);
+                        
                         const numMap = { 'singular': '單數', 'plural': '複數', 'dual': '雙數' };
-                        if (part.number && numMap[part.number.toLowerCase()]) addTag(numMap[part.number.toLowerCase()]);
-                        else if (part.number) addTag(part.number);
-
+                        if (part.number && numMap[part.number.toLowerCase()]) addTag(numMap[part.number.toLowerCase()]); else if (part.number) addTag(part.number);
+                        
                         const stateMap = { 'absolute': '絕對態', 'construct': '附屬態' };
                         if (part.state && stateMap[part.state.toLowerCase()]) addTag(stateMap[part.state.toLowerCase()]);
-
-                        const stemMap = {
-                            'qal': 'Qal(輕)', 'niphal': 'Niphal(被動)', 'piel': 'Piel(強調)', 
-                            'pual': 'Pual(強被)', 'hiphil': 'Hiphil(使役)', 'hophal': 'Hophal(使被)', 'hithpael': 'Hithpael(反身)'
-                        };
+                        
+                        const stemMap = { 'qal': 'Qal(輕)', 'niphal': 'Niphal(被動)', 'piel': 'Piel(強調)', 'pual': 'Pual(強被)', 'hiphil': 'Hiphil(使役)', 'hophal': 'Hophal(使被)', 'hithpael': 'Hithpael(反身)' };
                         if (part.stem && stemMap[part.stem.toLowerCase()]) addTag(`語幹: ${stemMap[part.stem.toLowerCase()]}`);
-
-                        const conjMap = {
-                            'perfect': '完成式', 'imperfect': '未完成式', 'sequential imperfect': '連續未完成式',
-                            'imperative': '祈使語氣', 'infinitive construct': '附屬不定詞', 'infinitive absolute': '絕對不定詞',
-                            'participle': '分詞'
-                        };
-                        if (part.conjugation && conjMap[part.conjugation.toLowerCase()]) addTag(`語氣: ${conjMap[part.conjugation.toLowerCase()]}`);
-                        else if (part.conjugation) addTag(`語氣: ${part.conjugation}`);
-
+                        
+                        const conjMap = { 'perfect': '完成式', 'imperfect': '未完成式', 'sequential imperfect': '連續未完成式', 'imperative': '祈使語氣', 'infinitive construct': '附屬不定詞', 'infinitive absolute': '絕對不定詞', 'participle': '分詞' };
+                        if (part.conjugation && conjMap[part.conjugation.toLowerCase()]) addTag(`語氣: ${conjMap[part.conjugation.toLowerCase()]}`); else if (part.conjugation) addTag(`語氣: ${part.conjugation}`);
+                        
                         const personMap = { '1st': '第一人稱', '2nd': '第二人稱', '3rd': '第三人稱' };
                         if (part.person && personMap[part.person.toLowerCase()]) addTag(personMap[part.person.toLowerCase()]);
                     });
@@ -287,7 +240,7 @@
                     if (tags.length > 0) return tags;
                 }
 
-                // 備用字串解析邏輯 (Fallback)
+                // 備用字串解析與 N/A 過濾
                 let rawCode = '';
                 let posRaw = '';
                 
@@ -298,7 +251,6 @@
                    rawCode = String(rawCodeOrObj).trim();
                 }
 
-                // 過濾 N/A
                 if (rawCode.toUpperCase() === 'N/A' || rawCode.toUpperCase() === 'NONE') rawCode = '';
                 if (posRaw.toUpperCase() === 'N/A' || posRaw.toUpperCase() === 'NONE') posRaw = '';
 
@@ -308,15 +260,12 @@
                     'masc': '陽性', 'masculine': '陽性', 'fem': '陰性', 'feminine': '陰性', 'neut': '中性', 'common': '通性',
                     'sing': '單數', 'singular': '單數', 'plur': '複數', 'plural': '複數', 'dual': '雙數',
                     'nom': '主格', 'gen': '屬格', 'dat': '與格', 'acc': '賓格', 'voc': '呼格',
-                    'pres': '現在式', 'aor': '不定過去', 'imperf': '未完成', 'perf': '完成', 'fut': '未來',
-                    'ind': '直陳', 'subj': '假設', 'impv': '祈使', 'inf': '不定詞', 'ptcp': '分詞',
-                    'act': '主動', 'mid': '關身', 'pass': '被動', '1st': '第一人稱', '2nd': '第二人稱', '3rd': '第三人稱',
-                    'qal': 'Qal', 'niphal': 'Niphal', 'piel': 'Piel', 'pual': 'Pual', 'hiphil': 'Hiphil', 'hophal': 'Hophal', 'hithpael': 'Hithpael',
-                    'absolute': '絕對態', 'construct': '附屬態'
+                    'pres': '現在式', 'impf': '未完成式', 'fut': '未來式', 'aor': '不定過去式', 'perf': '完成式', 'plup': '過去完成式',
+                    'act': '主動', 'mid': '關身', 'pass': '被動', 'ind': '直陳', 'subj': '假設', 'opt': '祈願', 'impv': '祈使', 'inf': '不定詞', 'ptcp': '分詞'
                 };
 
                 Object.entries(fullTermMap).forEach(([en, zh]) => {
-                    if (new RegExp(`\\b${en}\\b`).test(rawCode.toUpperCase()) || new RegExp(`\\b${en}\\b`).test(posRaw.toUpperCase())) {
+                    if (new RegExp(`\\b${en}\\b`).test(rawCode.toLowerCase()) || new RegExp(`\\b${en}\\b`).test(posRaw.toLowerCase())) {
                         addTag(zh);
                     }
                 });
@@ -330,13 +279,12 @@
                 return tags;
             };
 
-            // --- JSON 解析正規化 ---
             const normalizeBibleData = (rawJson) => {
                 const result = {}; 
                 
                 if (rawJson && typeof rawJson === 'object' && !Array.isArray(rawJson)) {
                     const keys = Object.keys(rawJson);
-                    if (keys.length > 0 && /^[GH]\d+/.test(keys[0])) return rawJson; // 是字典檔
+                    if (keys.length > 0 && /^[GH]\d+/.test(keys[0])) return rawJson;
                 }
 
                 const allBooks = [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT];
@@ -351,7 +299,7 @@
                   'PSALM': 'PSA', 'SONG': 'SNG', 'CANTICLES': 'SNG', 'EZEK': 'EZK', 'MATT': 'MAT', 'MARK': 'MRK',
                   'LUKE': 'LUK', 'JOHN': 'JHN', '1COR': '1CO', '2COR': '2CO', '1THESS': '1TH', '2THESS': '2TH', 
                   '1TIM': '1TI', '2TIM': '2TI', 'PHILEM': 'PHM', 'HEB': 'HEB', 'JAMES': 'JAS', '1PET': '1PE',
-                  '2PET': '2PE', '1JOHN': '1JO', '2JOHN': '2JO', '3JOHN': '3JO', 'REV': 'REV'
+                  '2PET': '2PE', '1JOHN': '1JN', '2JOHN': '2JN', '3JOHN': '3JN', 'REV': 'REV'
                 };
                 
                 const parseVerseRef = (refStr) => {
@@ -380,7 +328,7 @@
                 };
 
                 try {
-                    // NA28 新格式: { "Act.1.1": [ { "word": "...", ... } ] }
+                    // NA28 全新格式： { "Act.1.1": [ { "word": "...", ... } ] }
                     if (typeof rawJson === 'object' && !Array.isArray(rawJson)) {
                         const firstKey = Object.keys(rawJson)[0];
                         if (firstKey && firstKey.includes('.') && Array.isArray(rawJson[firstKey])) {
@@ -398,7 +346,7 @@
                         }
                     }
 
-                    // 舊格式: { "1Chr": [ { "verse": "1Chr.1.1", "words": [...] } ] }
+                    // 舊格式： { "1Chr": [ { "verse": "1Chr.1.1", "words": [...] } ] }
                     if (typeof rawJson === 'object' && !Array.isArray(rawJson)) {
                         const firstKey = Object.keys(rawJson)[0];
                         if (firstKey && Array.isArray(rawJson[firstKey]) && rawJson[firstKey][0] && rawJson[firstKey][0].verse && rawJson[firstKey][0].words) {
@@ -418,117 +366,72 @@
                         }
                     }
 
-                    // 格式 A: 陣列 [{book_name, chapter, verse, text}] (如 LXX)
-                    if (Array.isArray(rawJson) && rawJson.length > 0 && rawJson[0].book_name) {
+                    // 格式 A: 陣列 [{book_name, chapter, verse, text}]
+                    if (Array.isArray(rawJson)) {
                         rawJson.forEach(item => {
-                            const bId = getBookId(item.book_name);
+                            const bId = getBookId(item.book_name || item.book);
                             if (bId) {
                                 ensurePath(bId, item.chapter);
-                                result[bId][item.chapter][item.verse] = item.text || item.words || item.content;
+                                result[bId][item.chapter][item.verse] = item.text || item.words || item;
                             }
                         });
                         return result;
                     }
 
-                    // 格式 B: 嵌套物件 { bookName: { chapterNum: { verseNum: text } } }
-                    for (const bookKey in rawJson) {
-                        const bId = getBookId(bookKey);
+                    // 格式 B/C 容錯處理
+                    for (const key in rawJson) {
+                        const bId = getBookId(key);
                         if (bId) {
                             result[bId] = {};
-                            for (const chKey in rawJson[bookKey]) {
-                                result[bId][chKey] = {};
-                                for (const vKey in rawJson[bookKey][chKey]) {
-                                    result[bId][chKey][vKey] = rawJson[bookKey][chKey][vKey];
+                            for (const ch in rawJson[key]) {
+                                result[bId][ch] = {};
+                                for (const v in rawJson[key][ch]) {
+                                    result[bId][ch][v] = rawJson[key][ch][v];
                                 }
                             }
                         }
                     }
-                    return result;
+                    return Object.keys(result).length > 0 ? result : rawJson;
 
                 } catch (e) {
-                    console.error("解析 JSON 發生錯誤:", e);
-                    return {};
+                    console.error("JSON normalization error:", e);
+                    return rawJson;
                 }
             };
 
             useEffect(() => {
-                const loadData = async () => {
+                const loadAllData = async () => {
                     const keys = Object.keys(FILE_ENDPOINTS);
-                    setLoadingState({ total: keys.length, loaded: 0, text: '啟動中...' });
+                    setLoadingState({ total: keys.length, loaded: 0, text: '準備載入資料庫...' });
                     
-                    const data = {};
-                    let loadedCount = 0;
+                    const loadedData = {};
+                    let currentLoaded = 0;
 
                     for (const key of keys) {
+                        setLoadingState(prev => ({ ...prev, text: `載入中: ${key}...` }));
                         try {
-                            setLoadingState(p => ({ ...p, text: `載入 ${key}...` }));
                             const res = await fetch(FILE_ENDPOINTS[key]);
-                            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-                            const raw = await res.json();
-                            
-                            if (key.startsWith('dict')) {
-                                data[key] = raw; 
-                            } else {
-                                data[key] = normalizeBibleData(raw);
-                            }
-                            
-                            loadedCount++;
-                            setLoadingState(p => ({ ...p, loaded: loadedCount }));
-                        } catch (e) {
-                            console.error(`載入 ${key} 失敗:`, e);
-                            setLoadingState(p => ({ ...p, text: `載入 ${key} 失敗` }));
+                            const json = await res.json();
+                            loadedData[key] = normalizeBibleData(json);
+                        } catch (err) {
+                            console.error(`Failed to load ${key}:`, err);
+                            loadedData[key] = null;
                         }
+                        currentLoaded++;
+                        setLoadingState(prev => ({ ...prev, loaded: currentLoaded }));
                     }
-                    
-                    setLoadedBibles(data);
+
+                    setLoadedBibles(loadedData);
                     setAppReady(true);
                 };
-                
-                loadData();
+
+                loadAllData();
             }, []);
 
             useEffect(() => {
                 if (darkMode) document.documentElement.classList.add('dark');
                 else document.documentElement.classList.remove('dark');
             }, [darkMode]);
-
-            const chapterData = useMemo(() => {
-                if (!appReady) return [];
-                
-                const bId = currentVerse.bookId;
-                const ch = currentVerse.chapter;
-                const activeVersions = [version1, version2, version3].filter(v => v !== 'none');
-                
-                let maxVerses = 0;
-                activeVersions.forEach(v => {
-                    if (loadedBibles[v] && loadedBibles[v][bId] && loadedBibles[v][bId][ch]) {
-                        const verses = Object.keys(loadedBibles[v][bId][ch]).map(Number);
-                        if (verses.length > 0) {
-                            maxVerses = Math.max(maxVerses, Math.max(...verses));
-                        }
-                    }
-                });
-                
-                if (maxVerses === 0) return [];
-                
-                const data = [];
-                for (let v = 1; v <= maxVerses; v++) {
-                    const verseData = { verseNum: v, bookId: bId, chapter: ch, texts: {}, original: {} };
-                    
-                    activeVersions.forEach(ver => {
-                        const srcData = loadedBibles[ver]?.[bId]?.[ch]?.[v];
-                        if (ver.startsWith('orig-')) {
-                            verseData.original[ver] = srcData || '尚未匯入';
-                        } else {
-                            verseData.texts[ver] = srcData || '---';
-                        }
-                    });
-                    
-                    data.push(verseData);
-                }
-                
-                return data;
-            }, [appReady, currentVerse, version1, version2, version3, loadedBibles]);
 
             const handleWordClick = (word, versionConfig, verseData, wordIndex) => {
                 const clean = word.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim();
@@ -573,7 +476,8 @@
                         chapter: verseData.chapter,
                         verseNum: verseData.verseNum,
                         wordIndex: wordIndex,
-                        versionConfig: versionConfig
+                        versionConfig: versionConfig,
+                        morphInfo: targetMorphInfo // 直接綁定精確的形態學資料
                     });
                 } else {
                     setDictContext(null);
@@ -583,60 +487,18 @@
                 setDictQuery(clean); 
             };
 
-            const dictionaryResults = useMemo(() => {
-                if (!dictQuery) return [];
-                
-                const query = dictQuery.trim();
+            const searchDictionary = (query, currentDictId) => {
                 if (!query) return [];
-                
-                const currentDictId = dictTarget;
-                const isHebrewDict = currentDictId === 'dict-wlc-strongs';
+                const qClean = query.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim();
+                if (!qClean) return [];
 
+                const results = [];
+                const isHebrewDict = currentDictId.includes('hebrew') || currentDictId === 'dict-wlc-strongs';
+                
                 let contextMorph = null;
                 if (dictContext) {
-                    const { bookId, chapter, verseNum, wordIndex, versionConfig } = dictContext;
-                    
-                    let targetMorphDB = null;
-                    if (versionConfig === 'orig-wlc') targetMorphDB = loadedBibles['morph-wlc'];
-                    if (versionConfig === 'orig-na28') targetMorphDB = loadedBibles['morph-na28'];
-
-                    if (targetMorphDB && targetMorphDB[bookId] && targetMorphDB[bookId][chapter] && targetMorphDB[bookId][chapter][verseNum]) {
-                        const vData = targetMorphDB[bookId][chapter][verseNum];
-                        if (Array.isArray(vData)) {
-                             contextMorph = vData[wordIndex];
-                             if (contextMorph && (contextMorph.word || contextMorph.text) && (contextMorph.word || contextMorph.text).replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() !== query) {
-                                 contextMorph = vData.find(w => (w.word || w.text) && (w.word || w.text).replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() === query) || null;
-                             }
-                        } else {
-                            contextMorph = vData[wordIndex] || vData[String(wordIndex)];
-                        }
-                    } else if (versionConfig === 'orig-lxx' || versionConfig === 'orig-na28') {
-                        const bibleData = loadedBibles[versionConfig];
-                        if (bibleData && bibleData[bookId] && bibleData[bookId][chapter] && bibleData[bookId][chapter][verseNum]) {
-                            const vData = bibleData[bookId][chapter][verseNum];
-                            if (Array.isArray(vData) && vData.length > 0 && typeof vData[0] === 'object') {
-                                contextMorph = vData[wordIndex];
-                                if (contextMorph && (contextMorph.word || contextMorph.text) && (contextMorph.word || contextMorph.text).replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() !== query) {
-                                     contextMorph = vData.find(w => (w.word || w.text) && (w.word || w.text).replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() === query) || null;
-                                }
-                            }
-                        }
-                    }
+                    contextMorph = dictContext.morphInfo;
                 }
-
-                const removeDiacritics = (str) => {
-                    if (!str) return '';
-                    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[\u0591-\u05C7]/g, ""); 
-                };
-
-                const normalizeFinalForms = (str) => {
-                    if (!str) return '';
-                    return str.replace(/ך/g, 'כ').replace(/ם/g, 'מ').replace(/ן/g, 'נ').replace(/ף/g, 'פ').replace(/ץ/g, 'צ');
-                };
-
-                const qClean = normalizeFinalForms(removeDiacritics(query.toLowerCase()));
-                const qRaw = query.toLowerCase();
-                const results = [];
 
                 let explicitStrongs = null;
                 let explicitLemma = null;
@@ -648,10 +510,9 @@
                         explicitStrongs = Array.isArray(contextMorph.strongs) ? String(contextMorph.strongs[0]) : String(contextMorph.strongs);
                     }
                     if (contextMorph.lemma || (contextMorph.lexicon && contextMorph.lexicon.lemma)) {
-                        explicitLemma = normalizeFinalForms(removeDiacritics(contextMorph.lemma || contextMorph.lexicon.lemma));
+                        explicitLemma = (contextMorph.lemma || contextMorph.lexicon.lemma).normalize('NFC');
                     }
                     explicitGloss = contextMorph.gloss || (contextMorph.lexicon && contextMorph.lexicon.gloss);
-                    
                     if (contextMorph.english) {
                         explicitEnglish = String(contextMorph.english).replace(/</g, '&lt;').replace(/>/g, '&gt;');
                     }
@@ -681,23 +542,38 @@
                 }
 
                 const dict = loadedBibles[currentDictId];
+                
+                const removeDiacritics = (str) => {
+                    if (!str) return '';
+                    return str.normalize('NFD').replace(/[\u0300-\u036f\u0591-\u05C7\u1DC0-\u1DFF]/g, '').toLowerCase();
+                };
+
                 const getStrongConsonants = (str) => str.replace(/[אהוי]/g, '');
+
+                const qRaw = query.toLowerCase();
+                const qNorm = removeDiacritics(qRaw);
+                const qCons = isHebrewDict ? getStrongConsonants(qNorm) : qNorm;
+                
+                const lemmaNormMatch = explicitLemma ? removeDiacritics(explicitLemma) : null;
 
                 for (const [strongs, data] of Object.entries(dict)) {
                     let score = 0;
-                    const lemmaClean = normalizeFinalForms(removeDiacritics(data.lemma ? data.lemma.toLowerCase() : ''));
-                    const lemmaRaw = data.lemma ? data.lemma.toLowerCase() : '';
-                    
+                    const lemma = (data.lemma || '').toLowerCase();
+                    const lemmaNorm = removeDiacritics(lemma);
+                    const lemmaCons = isHebrewDict ? getStrongConsonants(lemmaNorm) : lemmaNorm;
+                    const strongDef = (data.strongs_definition || '').toLowerCase();
+                    const htmlDef = (data.definition || '').toLowerCase();
+                    const gloss = (data.gloss || '').toLowerCase();
+                    const translit = (data.transliteration || '').toLowerCase();
+
                     if (explicitStrongs && strongs === explicitStrongs) score += 1000;
-                    if (explicitLemma && lemmaClean === explicitLemma) score += 500;
-
-                    if (lemmaRaw === qRaw) score += 100;
-                    else if (lemmaClean === qClean) score += 80;
-                    else if (isHebrewDict && getStrongConsonants(lemmaClean) === getStrongConsonants(qClean) && qClean.length > 1) score += 50;
-
-                    const strongDef = data.strongs_definition ? data.strongs_definition.toLowerCase() : '';
-                    const htmlDef = data.definition ? data.definition.toLowerCase() : '';
-                    const gloss = data.gloss ? data.gloss.toLowerCase() : '';
+                    if (lemmaNormMatch && lemmaNorm === lemmaNormMatch) score += 500;
+                    
+                    if (qClean === strongs) score += 800;
+                    if (qRaw === lemma) score += 500;
+                    if (qNorm === lemmaNorm) score += 300;
+                    if (isHebrewDict && qCons === lemmaCons && qCons.length > 2) score += 100;
+                    if (translit === qNorm) score += 100;
 
                     if (score === 0) {
                         if (strongDef.includes(qRaw) || htmlDef.includes(qRaw) || gloss.includes(qRaw)) {
@@ -729,8 +605,7 @@
                             source: sourceName,
                             morphology: contextMorph.morphology,
                             morph_code: contextMorph.morph_code,
-                            pos: contextMorph.pos,
-                            derivation: contextMorph.derivation
+                            pos: contextMorph.pos
                         });
                     } else {
                         exactMatch.morphology = contextMorph.morphology || exactMatch.morphology;
@@ -740,349 +615,369 @@
                     }
                 }
 
-                results.sort((a, b) => {
-                    if (b.score !== a.score) return b.score - a.score;
-                    return a.strongs.localeCompare(b.strongs);
-                });
-
+                results.sort((a, b) => b.score - a.score);
                 return results.slice(0, 15);
-            }, [dictQuery, dictTarget, loadedBibles, dictContext]);
-
-            const getContextMorphology = () => {
-                if (!dictContext) return null;
-                
-                try {
-                    const { bookId, chapter, verseNum, wordIndex, versionConfig } = dictContext;
-                    
-                    let targetMorphDB = null;
-                    if (versionConfig === 'orig-wlc') targetMorphDB = loadedBibles['morph-wlc'];
-                    if (versionConfig === 'orig-na28') targetMorphDB = loadedBibles['morph-na28'];
-                    
-                    if (targetMorphDB && targetMorphDB[bookId] && targetMorphDB[bookId][chapter] && targetMorphDB[bookId][chapter][verseNum]) {
-                        const vData = targetMorphDB[bookId][chapter][verseNum];
-                        if (Array.isArray(vData)) {
-                            let morphInfo = vData[wordIndex];
-                            if (morphInfo && (morphInfo.word || morphInfo.text) && (morphInfo.word || morphInfo.text).replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() !== dictContext.word) {
-                                morphInfo = vData.find(w => (w.word || w.text) && (w.word || w.text).replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() === dictContext.word) || null;
-                            }
-                            return morphInfo;
-                        }
-                        return vData[wordIndex] || vData[String(wordIndex)];
-                    }
-
-                    const bibleData = loadedBibles[versionConfig];
-                    if (bibleData && bibleData[bookId] && bibleData[bookId][chapter] && bibleData[bookId][chapter][verseNum]) {
-                        const vData = bibleData[bookId][chapter][verseNum];
-                        if (Array.isArray(vData) && vData.length > 0 && typeof vData[0] === 'object') {
-                            let morphInfo = vData[wordIndex];
-                            if (morphInfo && (morphInfo.word || morphInfo.text) && (morphInfo.word || morphInfo.text).replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() !== dictContext.word) {
-                                morphInfo = vData.find(w => (w.word || w.text) && (w.word || w.text).replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() === dictContext.word) || null;
-                            }
-                            return morphInfo;
-                        }
-                    }
-                    
-                    return null;
-                } catch (e) {
-                    return null;
-                }
             };
 
-            if (!appReady) return (
-                <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900">
-                    <lucide.BookOpen className="w-16 h-16 text-blue-500 animate-pulse mb-6" />
-                    <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-2">準備神聖的數據庫...</h2>
-                    <div className="w-64 bg-slate-200 dark:bg-slate-700 rounded-full h-3 mb-4 overflow-hidden">
-                        <div className="bg-blue-500 h-3 rounded-full transition-all duration-300" style={{ width: `${(loadingState.loaded / loadingState.total) * 100}%` }}></div>
-                    </div>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">{loadingState.text} ({loadingState.loaded}/{loadingState.total})</p>
-                </div>
-            );
+            const compileChapterData = () => {
+                if (!appReady) return [];
+                const { bookId, chapter } = currentVerse;
+                
+                let v1Data = loadedBibles[version1]?.[bookId]?.[chapter] || {};
+                let verses = [];
+                let maxVerse = 0;
 
-            const activeVersions = [version1, version2, version3].filter(v => v !== 'none');
-            const contextMorphologyData = getContextMorphology();
-            const morphTags = contextMorphologyData ? parseMorphologyTags(contextMorphologyData) : [];
+                const getVersesCount = (dataMap) => {
+                    if(!dataMap) return 0;
+                    return Math.max(...Object.keys(dataMap).map(Number).filter(n => !isNaN(n)), 0);
+                };
+
+                maxVerse = Math.max(
+                    getVersesCount(v1Data),
+                    getVersesCount(loadedBibles[version2]?.[bookId]?.[chapter]),
+                    version3 !== 'none' ? getVersesCount(loadedBibles[version3]?.[bookId]?.[chapter]) : 0
+                );
+
+                for (let i = 1; i <= (maxVerse || 30); i++) {
+                    const extractText = (ver, db) => {
+                        const cell = db?.[bookId]?.[chapter]?.[i];
+                        if (!cell) return null;
+                        if (typeof cell === 'string') return cell;
+                        if (Array.isArray(cell)) {
+                            // NA28, LXX, WLC 結構處理
+                            return cell.map(w => w.word || w.text || w).join(' ');
+                        }
+                        return cell.text || JSON.stringify(cell);
+                    };
+
+                    const getOriginalArray = (ver, db) => {
+                         const cell = db?.[bookId]?.[chapter]?.[i];
+                         if (Array.isArray(cell)) return cell;
+                         if (typeof cell === 'string') return cell.split(' ');
+                         return [];
+                    };
+
+                    verses.push({
+                        verseNum: i,
+                        bookId: bookId,
+                        chapter: chapter,
+                        v1Text: extractText(version1, loadedBibles[version1]) || '...',
+                        v2Text: extractText(version2, loadedBibles[version2]) || '...',
+                        v3Text: version3 !== 'none' ? (extractText(version3, loadedBibles[version3]) || '...') : null,
+                        original: {
+                            [version2]: getOriginalArray(version2, loadedBibles[version2]),
+                            ...(version3 !== 'none' ? { [version3]: getOriginalArray(version3, loadedBibles[version3]) } : {})
+                        }
+                    });
+                }
+                return verses.filter(v => v.v1Text !== '...' || v.v2Text !== '...');
+            };
+
+            const renderVerseText = (textObj, verConfig, verseData) => {
+                 if (!textObj) return <span className="text-gray-400">尚未匯入</span>;
+                 
+                 const isOriginal = ['orig-wlc', 'orig-na28', 'orig-lxx'].includes(verConfig);
+                 const isHebrew = verConfig === 'orig-wlc';
+                 const isGreek = verConfig === 'orig-na28' || verConfig === 'orig-lxx';
+
+                 let textClass = "text-base md:text-lg leading-relaxed ";
+                 if (isHebrew) textClass += "hebrew-text text-xl md:text-2xl ";
+                 else if (isGreek) textClass += "greek-text text-lg md:text-xl ";
+
+                 if (isOriginal && verseData.original && verseData.original[verConfig]) {
+                     const wordsArr = verseData.original[verConfig];
+                     if (wordsArr.length > 0) {
+                          return (
+                              <div className={`${textClass} flex flex-wrap gap-x-2 gap-y-1 ${isHebrew ? 'justify-end' : ''}`}>
+                                  {wordsArr.map((wObj, idx) => {
+                                      const wordStr = typeof wObj === 'string' ? wObj : (wObj.word || wObj.text || '');
+                                      return (
+                                          <span 
+                                              key={idx} 
+                                              className="word-hover hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                              onClick={() => handleWordClick(wordStr, verConfig, verseData, idx)}
+                                              title="點擊查詢字典與文法"
+                                          >
+                                              {wordStr}
+                                          </span>
+                                      );
+                                  })}
+                              </div>
+                          );
+                     }
+                 }
+
+                 if (typeof textObj === 'string') {
+                     return <div className={textClass}>{textObj}</div>;
+                 }
+                 
+                 return <div className={textClass}>{JSON.stringify(textObj)}</div>;
+            };
+
+            if (!appReady) {
+                return (
+                    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900">
+                        <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                        <h2 className="text-xl font-bold text-slate-700 dark:text-slate-200 mb-2">啟動聖經研究環境</h2>
+                        <p className="text-slate-500 dark:text-slate-400 mb-4">{loadingState.text}</p>
+                        <div className="w-64 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                            <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                                 style={{ width: `${loadingState.total ? (loadingState.loaded / loadingState.total) * 100 : 0}%` }}>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            const chapterData = compileChapterData();
+            const currentBook = [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT].find(b => b.id === currentVerse.bookId);
 
             return (
-                <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
-                    {/* 左側導航列 */}
-                    <div className="w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col shadow-sm z-10 flex-shrink-0">
-                        <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center gap-3 bg-gradient-to-r from-blue-50 to-white dark:from-slate-800 dark:to-slate-800">
-                            <div className="bg-blue-500 p-2 rounded-lg shadow-sm">
-                                <lucide.Library className="w-5 h-5 text-white" />
-                            </div>
-                            <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight">聖經原文探索器</h1>
+                <div className={`min-h-screen flex flex-col font-sans transition-colors duration-200 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200`}>
+                    
+                    {/* 頂部導覽列 */}
+                    <header className="sticky top-0 z-20 flex flex-col md:flex-row items-center justify-between px-4 py-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm gap-4">
+                        <div className="flex items-center w-full md:w-auto justify-between md:justify-start gap-4">
+                            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-300">
+                                <lucide.Menu size={20} />
+                            </button>
+                            <h1 className="text-lg md:text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent flex items-center gap-2">
+                                <lucide.BookOpen size={24} className="text-blue-600" />
+                                原文對照探索器
+                            </h1>
+                            <button onClick={() => setDarkMode(!darkMode)} className="p-2 md:hidden hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
+                                {darkMode ? <lucide.Sun size={20} /> : <lucide.Moon size={20} />}
+                            </button>
                         </div>
                         
-                        <div className="flex-1 overflow-y-auto p-3 space-y-6">
-                            <div>
-                                <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3 px-2 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-amber-500"></div> 舊約全書</h3>
-                                <div className="grid grid-cols-5 gap-1.5">
-                                    {BIBLE_STRUCTURE.OT.map(book => (
-                                        <button 
-                                            key={book.id}
-                                            onClick={() => { setCurrentVerse({ bookId: book.id, chapter: 1 }); if (contentRef.current) contentRef.current.scrollTop = 0; }}
-                                            className={`p-2 rounded-md text-xs font-medium transition-all ${currentVerse.bookId === book.id ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 shadow-inner' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
-                                            title={book.name}
-                                        >
-                                            {book.abbr}
-                                        </button>
-                                    ))}
-                                </div>
+                        <div className="flex flex-wrap items-center justify-center gap-2 w-full md:w-auto text-sm">
+                            <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+                                <button onClick={() => setLayoutMode('column')} className={`px-3 py-1.5 rounded-md flex items-center gap-1 ${layoutMode === 'column' ? 'bg-white dark:bg-slate-700 shadow-sm font-medium' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
+                                    <lucide.Columns size={16} /> 欄位
+                                </button>
+                                <button onClick={() => setLayoutMode('row')} className={`px-3 py-1.5 rounded-md flex items-center gap-1 ${layoutMode === 'row' ? 'bg-white dark:bg-slate-700 shadow-sm font-medium' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
+                                    <lucide.Rows size={16} /> 行列
+                                </button>
                             </div>
-                            <div>
-                                <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3 px-2 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-500"></div> 新約全書</h3>
-                                <div className="grid grid-cols-5 gap-1.5">
-                                    {BIBLE_STRUCTURE.NT.map(book => (
-                                        <button 
-                                            key={book.id}
-                                            onClick={() => { setCurrentVerse({ bookId: book.id, chapter: 1 }); if (contentRef.current) contentRef.current.scrollTop = 0; }}
-                                            className={`p-2 rounded-md text-xs font-medium transition-all ${currentVerse.bookId === book.id ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 shadow-inner' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
-                                            title={book.name}
-                                        >
-                                            {book.abbr}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    {/* 右側主要內容區 */}
-                    <div className="flex-1 flex flex-col relative overflow-hidden">
-                        {/* 頂部工具列 */}
-                        <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-3 lg:p-4 flex flex-wrap items-center justify-between gap-4 shadow-sm z-10">
+                            {/* 版本選擇區塊 */}
+                            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                                <select value={version1} onChange={e => setVersion1(e.target.value)} className="bg-transparent border-none text-sm font-medium focus:ring-0 cursor-pointer dark:text-slate-200 max-w-[100px] md:max-w-[150px] truncate">
+                                    <optgroup label="中文">
+                                        <option value="cunp">和合本 (CUNP)</option>
+                                        <option value="rcuv">和合本修訂版 (RCUV)</option>
+                                        <option value="lzz">呂振中譯本 (LZZ)</option>
+                                    </optgroup>
+                                    <optgroup label="英文">
+                                        <option value="kjv">KJV</option>
+                                    </optgroup>
+                                </select>
+                                <span className="text-slate-300 dark:text-slate-600">|</span>
+                                <select value={version2} onChange={e => setVersion2(e.target.value)} className="bg-transparent border-none text-sm font-medium focus:ring-0 cursor-pointer dark:text-slate-200 max-w-[100px] md:max-w-[150px] truncate text-blue-600 dark:text-blue-400">
+                                    <optgroup label="中文/英文">
+                                        <option value="cunp">和合本</option>
+                                        <option value="kjv">KJV</option>
+                                    </optgroup>
+                                    <optgroup label="原文">
+                                        {isOldTestament(currentVerse.bookId) ? (
+                                            <>
+                                                <option value="orig-wlc">WLC 希伯來文</option>
+                                                <option value="orig-lxx">LXX 七十士譯本</option>
+                                            </>
+                                        ) : (
+                                            <option value="orig-na28">NA28 希臘文</option>
+                                        )}
+                                    </optgroup>
+                                </select>
+                                <span className="text-slate-300 dark:text-slate-600">|</span>
+                                <select value={version3} onChange={e => setVersion3(e.target.value)} className="bg-transparent border-none text-sm font-medium focus:ring-0 cursor-pointer dark:text-slate-200 max-w-[100px] md:max-w-[150px] truncate text-indigo-600 dark:text-indigo-400">
+                                    <option value="none">無 (隱藏)</option>
+                                    <optgroup label="中文/英文">
+                                        <option value="kjv">KJV</option>
+                                        <option value="lzz">呂振中</option>
+                                    </optgroup>
+                                    <optgroup label="原文">
+                                        {isOldTestament(currentVerse.bookId) ? (
+                                            <>
+                                                <option value="orig-wlc">WLC 希伯來文</option>
+                                                <option value="orig-lxx">LXX 七十士譯本</option>
+                                            </>
+                                        ) : (
+                                            <option value="orig-na28">NA28 希臘文</option>
+                                        )}
+                                    </optgroup>
+                                </select>
+                            </div>
                             
-                            {/* 章節選擇器 */}
-                            <div className="flex items-center gap-2 lg:gap-3 bg-slate-50 dark:bg-slate-900 p-1.5 lg:p-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
-                                <button 
-                                    onClick={() => setCurrentVerse(p => ({...p, chapter: Math.max(1, p.chapter - 1)}))}
-                                    className="p-1.5 hover:bg-white dark:hover:bg-slate-800 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors shadow-sm"
-                                    disabled={currentVerse.chapter <= 1}
-                                >
-                                    <lucide.ChevronLeft className="w-5 h-5" />
-                                </button>
-                                
-                                <div className="font-bold text-lg lg:text-xl text-slate-800 dark:text-slate-100 min-w-[80px] text-center">
-                                    {BIBLE_STRUCTURE.OT.concat(BIBLE_STRUCTURE.NT).find(b => b.id === currentVerse.bookId)?.name} <span className="text-blue-600 dark:text-blue-400">{currentVerse.chapter}</span>
-                                </div>
-
-                                <button 
-                                    onClick={() => {
-                                        const maxCh = BIBLE_STRUCTURE.OT.concat(BIBLE_STRUCTURE.NT).find(b => b.id === currentVerse.bookId)?.chapters;
-                                        setCurrentVerse(p => ({...p, chapter: Math.min(maxCh, p.chapter + 1)}));
-                                    }}
-                                    className="p-1.5 hover:bg-white dark:hover:bg-slate-800 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors shadow-sm"
-                                    disabled={currentVerse.chapter >= BIBLE_STRUCTURE.OT.concat(BIBLE_STRUCTURE.NT).find(b => b.id === currentVerse.bookId)?.chapters}
-                                >
-                                    <lucide.ChevronRight className="w-5 h-5" />
-                                </button>
-                            </div>
-
-                            {/* 版本控制區 */}
-                            <div className="flex flex-wrap items-center gap-3">
-                                <div className="flex gap-2 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
-                                    <button onClick={() => setLayoutMode('column')} className={`p-1.5 rounded-md transition-all ${layoutMode === 'column' ? 'bg-white dark:bg-slate-800 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`} title="直行對照"><lucide.AlignVerticalJustifyStart className="w-4 h-4" /></button>
-                                    <button onClick={() => setLayoutMode('row')} className={`p-1.5 rounded-md transition-all ${layoutMode === 'row' ? 'bg-white dark:bg-slate-800 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`} title="橫列對照"><lucide.AlignHorizontalJustifyStart className="w-4 h-4" /></button>
-                                </div>
-
-                                <div className="h-6 w-px bg-slate-300 dark:bg-slate-600 hidden sm:block"></div>
-
-                                <div className="flex gap-2">
-                                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 self-center hidden sm:inline">對照 1:</span>
-                                    <select 
-                                        className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                                        value={version2} 
-                                        onChange={(e) => setVersion2(e.target.value)}
-                                    >
-                                        <option value="cunp">和合本</option>
-                                        <option value="rcuv">和合本修訂版</option>
-                                        <option value="lzz">呂振中譯本</option>
-                                        <option value="kjv">KJV</option>
-                                        <optgroup label="原文 (依新舊約自動過濾)">
-                                            {isOldTestament(currentVerse.bookId) ? (
-                                                <>
-                                                    <option value="orig-wlc">WLC 希伯來文 (舊約)</option>
-                                                    <option value="orig-lxx">LXX 七十士希臘文 (舊約)</option>
-                                                </>
-                                            ) : (
-                                                <option value="orig-na28">NA28 希臘文 (新約)</option>
-                                            )}
-                                        </optgroup>
-                                    </select>
-                                </div>
-
-                                <div className="flex gap-2">
-                                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 self-center hidden sm:inline">對照 2:</span>
-                                    <select 
-                                        className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                                        value={version3} 
-                                        onChange={(e) => setVersion3(e.target.value)}
-                                    >
-                                        <option value="none">無 (隱藏)</option>
-                                        <option value="cunp">和合本</option>
-                                        <option value="rcuv">和合本修訂版</option>
-                                        <option value="lzz">呂振中譯本</option>
-                                        <option value="kjv">KJV</option>
-                                        <optgroup label="原文 (依新舊約自動過濾)">
-                                            {isOldTestament(currentVerse.bookId) ? (
-                                                <>
-                                                    <option value="orig-wlc">WLC 希伯來文 (舊約)</option>
-                                                    <option value="orig-lxx">LXX 七十士希臘文 (舊約)</option>
-                                                </>
-                                            ) : (
-                                                <option value="orig-na28">NA28 希臘文 (新約)</option>
-                                            )}
-                                        </optgroup>
-                                    </select>
-                                </div>
-                                
-                                <button onClick={() => setDarkMode(!darkMode)} className="p-2 ml-auto lg:ml-0 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 transition-colors">
-                                    {darkMode ? <lucide.Sun className="w-5 h-5" /> : <lucide.Moon className="w-5 h-5" />}
-                                </button>
-                            </div>
+                            <button onClick={() => setDarkMode(!darkMode)} className="hidden md:flex p-2 ml-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400">
+                                {darkMode ? <lucide.Sun size={18} /> : <lucide.Moon size={18} />}
+                            </button>
                         </div>
+                    </header>
 
-                        {/* 經文閱讀區 */}
-                        <div ref={contentRef} className="flex-1 overflow-y-auto p-4 lg:p-8 scroll-smooth pb-32">
-                            <div className="max-w-5xl mx-auto space-y-6">
-                                {chapterData.map((verse, idx) => (
-                                    <div key={idx} className="flex flex-col sm:flex-row gap-4 p-4 lg:p-6 rounded-2xl bg-white dark:bg-slate-800/80 shadow-sm border border-slate-100 dark:border-slate-700/50 hover:shadow-md hover:border-blue-200 dark:hover:border-blue-800 transition-all duration-300 group">
-                                        <div className="sm:w-16 flex-shrink-0 flex sm:flex-col items-center sm:items-end gap-2 text-slate-400 pt-1">
-                                            <span className="text-sm font-bold bg-slate-100 dark:bg-slate-700/50 px-2.5 py-1 rounded-md">{verse.verseNum}</span>
-                                        </div>
-                                        
-                                        <div className={`flex-1 ${layoutMode === 'column' ? 'flex flex-col gap-4' : 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'} w-full`}>
-                                            {activeVersions.map((vConfig, vIdx) => {
-                                                const isOrig = vConfig.startsWith('orig-');
-                                                const content = isOrig ? verse.original[vConfig] : verse.texts[vConfig];
+                    <div className="flex flex-1 overflow-hidden relative">
+                        {/* 側邊欄 (章節選擇) */}
+                        <aside className={`absolute md:relative z-10 w-72 h-full bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-xl border-r border-slate-200 dark:border-slate-700 flex flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:hidden md:w-0 md:translate-x-0'} `} style={!sidebarOpen ? {display: 'none'} : {}}>
+                            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-2">舊約 Old Testament</h3>
+                                <div className="grid grid-cols-4 gap-1 mb-6">
+                                    {BIBLE_STRUCTURE.OT.map(book => (
+                                        <button key={book.id} onClick={() => setCurrentVerse({ bookId: book.id, chapter: 1 })}
+                                            className={`p-2 text-sm rounded-md transition-all ${currentVerse.bookId === book.id ? 'bg-blue-100 text-blue-700 font-bold dark:bg-blue-900 dark:text-blue-200' : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                                            {book.abbr}
+                                        </button>
+                                    ))}
+                                </div>
+                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-2">新約 New Testament</h3>
+                                <div className="grid grid-cols-4 gap-1">
+                                    {BIBLE_STRUCTURE.NT.map(book => (
+                                        <button key={book.id} onClick={() => setCurrentVerse({ bookId: book.id, chapter: 1 })}
+                                            className={`p-2 text-sm rounded-md transition-all ${currentVerse.bookId === book.id ? 'bg-indigo-100 text-indigo-700 font-bold dark:bg-indigo-900 dark:text-indigo-200' : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                                            {book.abbr}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            {currentBook && (
+                                <div className="h-48 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 overflow-y-auto custom-scrollbar">
+                                    <div className="text-sm font-bold text-center mb-2 text-slate-500">{currentBook.name}</div>
+                                    <div className="flex flex-wrap gap-1 justify-center">
+                                        {Array.from({ length: currentBook.chapters }, (_, i) => i + 1).map(ch => (
+                                            <button key={ch} onClick={() => setCurrentVerse({ ...currentVerse, chapter: ch })}
+                                                className={`w-8 h-8 flex items-center justify-center rounded-full text-sm font-medium transition-colors ${currentVerse.chapter === ch ? 'bg-blue-500 text-white shadow-md' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300'}`}>
+                                                {ch}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </aside>
+
+                        {/* 主要經文區塊 */}
+                        <main className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar bg-white dark:bg-slate-900 relative">
+                            <div className="max-w-5xl mx-auto pb-32">
+                                <h2 className="text-2xl md:text-3xl font-extrabold text-center mb-8 pb-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-center gap-3">
+                                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-slate-700 to-slate-900 dark:from-slate-200 dark:to-white">
+                                        {currentBook?.name} {currentVerse.chapter} 章
+                                    </span>
+                                </h2>
+                                
+                                <div className="space-y-6">
+                                    {chapterData.map((verse) => (
+                                        <div key={verse.verseNum} className="group relative bg-white dark:bg-slate-800/50 rounded-xl p-4 md:p-5 shadow-sm hover:shadow-md border border-slate-100 dark:border-slate-700/50 transition-all">
+                                            <div className="absolute top-4 left-4 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-sm font-bold text-slate-500 dark:text-slate-400 select-none">
+                                                {verse.verseNum}
+                                            </div>
+                                            
+                                            <div className={`pl-12 ${layoutMode === 'column' ? 'grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4' : 'flex flex-col gap-4'}`}>
+                                                {/* 對照 1 (主軸通常為中文) */}
+                                                <div className="space-y-1">
+                                                    <div className="text-xs font-bold text-slate-400 uppercase">{version1.toUpperCase()}</div>
+                                                    {renderVerseText(verse.v1Text, version1, verse)}
+                                                </div>
                                                 
-                                                if (isOrig) {
-                                                    const isHebrew = vConfig === 'orig-wlc';
-                                                    return (
-                                                        <div key={vIdx} className={`w-full ${isHebrew ? 'text-right' : 'text-left'}`}>
-                                                            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 select-none flex items-center gap-1.5 justify-start">
-                                                                <div className={`w-1.5 h-1.5 rounded-full ${isHebrew ? 'bg-amber-500' : 'bg-blue-500'}`}></div> {vConfig.replace('orig-', '').toUpperCase()} 原文
-                                                            </div>
-                                                            <div className={`text-xl lg:text-2xl leading-loose flex flex-wrap gap-x-2.5 gap-y-3 ${isHebrew ? 'hebrew-text justify-start flex-row-reverse' : 'greek-text justify-start'}`}>
-                                                                {Array.isArray(content) ? content.map((w, wIdx) => {
-                                                                    const text = typeof w === 'string' ? w : (w.word || w.text || '---');
-                                                                    const isPunctuation = /^[.,;·׃!?()[\]{}"'־…—\-]+$/.test(text);
-                                                                    if (isPunctuation) return <span key={wIdx} className="text-slate-400 select-none self-end pb-1">{text}</span>;
-                                                                    
-                                                                    return (
-                                                                        <span 
-                                                                            key={wIdx} 
-                                                                            onClick={() => handleWordClick(text, vConfig, verse, wIdx)}
-                                                                            className={`cursor-pointer px-1.5 py-0.5 rounded transition-all duration-200 border-b-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 active:scale-95 ${dictContext?.word === text.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() ? 'bg-blue-100 border-blue-400 dark:bg-blue-800/50 dark:border-blue-500 font-bold' : 'border-transparent hover:border-slate-300 dark:hover:border-slate-600'}`}
-                                                                        >
-                                                                            {text}
-                                                                        </span>
-                                                                    );
-                                                                }) : <span className="text-slate-400 italic text-base">無法解析此節原文格式</span>}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                } else {
-                                                    return (
-                                                        <div key={vIdx} className="w-full">
-                                                            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 select-none flex items-center gap-1.5">
-                                                                <div className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600"></div> {vConfig.toUpperCase()}
-                                                            </div>
-                                                            <div className="text-[17px] lg:text-lg text-slate-800 dark:text-slate-200 leading-relaxed font-medium">
-                                                                {content}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                }
-                                            })}
-                                        </div>
-                                    </div>
-                                ))}
-                                {chapterData.length === 0 && (
-                                    <div className="text-center py-20 text-slate-500 dark:text-slate-400 flex flex-col items-center">
-                                        <lucide.SearchX className="w-12 h-12 mb-4 opacity-50" />
-                                        <p>此章節沒有可用的經文資料</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                                                {/* 對照 2 (通常為原文) */}
+                                                <div className="space-y-1">
+                                                    <div className="text-xs font-bold text-blue-400 uppercase">{version2.toUpperCase()}</div>
+                                                    {renderVerseText(verse.v2Text, version2, verse)}
+                                                </div>
 
-                        {/* 字典彈窗面板 */}
+                                                {/* 對照 3 (可選) */}
+                                                {version3 !== 'none' && (
+                                                    <div className={`space-y-1 ${layoutMode === 'column' ? 'lg:col-span-2 pt-4 border-t border-slate-100 dark:border-slate-700/50 mt-2' : ''}`}>
+                                                        <div className="text-xs font-bold text-indigo-400 uppercase">{version3.toUpperCase()}</div>
+                                                        {renderVerseText(verse.v3Text, version3, verse)}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </main>
+
+                        {/* 字典與文法資訊浮動面板 (Slide-over) */}
                         {dictQuery && (
-                            <div className="absolute bottom-4 right-4 lg:bottom-8 lg:right-8 w-[calc(100%-2rem)] sm:w-96 max-h-[75vh] bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200/50 dark:border-slate-700/50 rounded-2xl shadow-2xl flex flex-col z-50 animate-slide-up overflow-hidden ring-1 ring-black/5 dark:ring-white/10">
-                                <div className="p-4 border-b border-slate-200/50 dark:border-slate-700/50 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-md sticky top-0 z-10">
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-blue-100 dark:bg-blue-900/50 p-2 rounded-lg">
-                                            <lucide.Book className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                                        </div>
-                                        <div>
-                                            <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                                                <span className={dictTarget === 'dict-wlc-strongs' ? 'hebrew-text text-xl' : 'greek-text text-xl'}>{dictQuery}</span>
-                                            </h3>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                                                {dictTarget === 'dict-wlc-strongs' ? '希伯來文解析' : dictTarget === 'dict-lxx-strongs' ? '七十士希臘文解析' : '新約希臘文解析'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <button onClick={() => {setDictQuery(''); setDictContext(null);}} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors text-slate-500">
-                                        <lucide.X className="w-5 h-5" />
+                            <div className="absolute right-0 top-0 h-full w-full md:w-96 bg-white dark:bg-slate-800 shadow-2xl border-l border-slate-200 dark:border-slate-700 z-30 flex flex-col transform transition-transform duration-300 ease-in-out overflow-hidden">
+                                <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
+                                    <h3 className="font-bold flex items-center gap-2 text-slate-700 dark:text-slate-200">
+                                        <lucide.Library size={18} className="text-indigo-500" />
+                                        原文分析與字典
+                                    </h3>
+                                    <button onClick={() => setDictQuery('')} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full text-slate-500 transition-colors">
+                                        <lucide.X size={18} />
                                     </button>
                                 </div>
                                 
-                                <div className="p-0 overflow-y-auto flex-1 custom-scrollbar">
-                                    {morphTags.length > 0 && (
-                                        <div className="p-4 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
-                                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5"><lucide.Info className="w-3 h-3" /> 當前經文文法標籤</div>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {morphTags.map((tag, idx) => (
-                                                    <span key={idx} className="px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs rounded-md shadow-sm">{tag}</span>
+                                <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar bg-slate-50/50 dark:bg-slate-800/50">
+                                    <div className="bg-white dark:bg-slate-900 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 text-center relative overflow-hidden">
+                                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-indigo-500"></div>
+                                        <div className="text-xs font-bold text-slate-400 mb-2">{dictTarget.includes('hebrew') || dictTarget.includes('wlc') ? '希伯來文 Hebrew' : '希臘文 Greek'}</div>
+                                        <div className={`text-4xl font-normal mb-3 ${dictTarget.includes('hebrew') || dictTarget.includes('wlc') ? 'hebrew-text text-blue-600 dark:text-blue-400' : 'greek-text text-indigo-600 dark:text-indigo-400'}`}>
+                                            {dictContext?.originalWord || dictQuery}
+                                        </div>
+                                        {dictContext && (
+                                            <div className="text-sm font-medium text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 py-1.5 px-3 rounded-full inline-flex items-center gap-2">
+                                                <lucide.MapPin size={14} />
+                                                {BIBLE_STRUCTURE.OT.concat(BIBLE_STRUCTURE.NT).find(b=>b.id===dictContext.bookId)?.name} {dictContext.chapter}:{dictContext.verseNum}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {dictContext && dictContext.morphInfo && (
+                                        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
+                                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                                <lucide.Tags size={14} /> 上下文語法結構
+                                            </h4>
+                                            <div className="flex flex-wrap gap-2">
+                                                {parseMorphologyTags(dictContext.morphInfo).map((tag, i) => (
+                                                    <span key={i} className="px-2.5 py-1 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 rounded-md text-xs font-medium border border-indigo-100 dark:border-indigo-800">
+                                                        {tag}
+                                                    </span>
                                                 ))}
                                             </div>
                                         </div>
                                     )}
 
-                                    {dictionaryResults.length > 0 ? (
-                                       <div className="p-4 space-y-4">
-                                           {dictionaryResults.map((r, i) => (
-                                               <div key={i} className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                                                  {i === 0 && <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>}
-                                                  
-                                                  <div className="flex justify-between items-start mb-3">
-                                                      <div className="flex flex-col">
-                                                          <span className={`text-2xl font-bold text-slate-800 dark:text-slate-100 ${dictTarget === 'dict-wlc-strongs' ? 'hebrew-text' : 'greek-text'}`}>{r.lemma || dictQuery}</span>
-                                                          {r.transliteration && <span className="text-xs font-mono text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded mt-1 w-max">{r.transliteration}</span>}
-                                                      </div>
-                                                      <span className="text-xs font-mono font-bold px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-600 flex items-center gap-1">
-                                                          <lucide.Hash className="w-3 h-3" /> {r.strongs}
-                                                      </span>
-                                                  </div>
-                                                  
-                                                  {r.isSynthesized && r.source && (
-                                                      <div className="mb-3">
-                                                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold rounded border border-indigo-100 dark:border-indigo-800">
-                                                              <lucide.Database className="w-3 h-3" /> 資料來源: {r.source}
-                                                          </span>
-                                                      </div>
-                                                  )}
-
-                                                  {r.strongs_definition && <p className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed"><span className="text-slate-400 font-normal mr-1">定義:</span> {r.strongs_definition}</p>}
-                                                  {r.definition && <div className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed mt-1" dangerouslySetInnerHTML={{ __html: r.definition.includes('<span') ? r.definition : `<span class="text-slate-400 font-normal mr-1">定義:</span> ${r.definition}` }} />}
-                                                  {r.derivation && r.derivation.toUpperCase() !== 'N/A' && r.derivation.toUpperCase() !== 'NONE' && <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mt-1"><span className="font-normal mr-1">字源:</span> {r.derivation}</p>}
-                                                  {r.kjv_definition && <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mt-1"><span className="font-normal mr-1">KJV:</span> {r.kjv_definition}</p>}
-                                                  {r.gloss && !r.strongs_definition && (!r.definition || r.isSynthesized) && <p className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed mt-1"><span className="text-slate-400 font-normal mr-1">簡義:</span> {r.gloss}</p>}
-                                               </div>
-                                           ))}
-                                       </div>
-                                    ) : (
-                                        <div className="p-8 text-center flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
-                                            <div className="bg-slate-100 dark:bg-slate-800 p-3 rounded-full mb-3">
-                                                <lucide.FileQuestion className="w-6 h-6" />
-                                            </div>
-                                            <p className="text-sm font-medium">字典中找不到對應資料</p>
-                                            <p className="text-xs mt-1 opacity-70">可嘗試點擊其他單字</p>
+                                    <div>
+                                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-1 flex items-center gap-2">
+                                            <lucide.Search size={14} /> 字典釋義
+                                        </h4>
+                                        <div className="space-y-3">
+                                            {searchDictionary(dictQuery, dictTarget).map((r, idx) => (
+                                                <div key={idx} className="bg-white dark:bg-slate-900 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700 transition-colors relative overflow-hidden">
+                                                   {idx === 0 && <div className="absolute top-0 right-0 bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-lg">最佳匹配</div>}
+                                                   
+                                                   <div className="flex justify-between items-start mb-2">
+                                                       <div>
+                                                           <div className="font-bold text-lg text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                                               {r.lemma}
+                                                               {r.isSynthesized && <span className="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 px-1.5 py-0.5 rounded uppercase">{r.source}</span>}
+                                                           </div>
+                                                           {r.transliteration && <div className="text-xs text-slate-500 dark:text-slate-400 italic mt-0.5">{r.transliteration}</div>}
+                                                       </div>
+                                                       <span className="text-xs font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded border border-slate-200 dark:border-slate-700">
+                                                           {r.strongs}
+                                                       </span>
+                                                   </div>
+                                                   
+                                                   <div className="mt-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 border border-slate-100 dark:border-slate-700/50">
+                                                      {r.strongs_definition && <p className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed"><span className="text-slate-400 font-normal mr-1">定義:</span> {r.strongs_definition}</p>}
+                                                      {r.definition && <div className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed mt-1" dangerouslySetInnerHTML={{ __html: r.definition.includes('<span') ? r.definition : `<span class="text-slate-400 font-normal mr-1">定義:</span> ${r.definition}` }} />}
+                                                      {r.derivation && r.derivation.toUpperCase() !== 'N/A' && r.derivation.toUpperCase() !== 'NONE' && <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mt-1"><span className="font-normal mr-1">字源:</span> {r.derivation}</p>}
+                                                      {r.kjv_definition && <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mt-1"><span className="font-normal mr-1">KJV:</span> {r.kjv_definition}</p>}
+                                                      {r.gloss && !r.strongs_definition && (!r.definition || r.isSynthesized) && <p className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed mt-1"><span className="text-slate-400 font-normal mr-1">簡義:</span> {r.gloss}</p>}
+                                                   </div>
+                                                </div>
+                                            ))}
+                                            {searchDictionary(dictQuery, dictTarget).length === 0 && (
+                                                <div className="text-center p-6 text-slate-500 text-sm border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
+                                                    字典中查無此字或翻譯
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
+                                    </div>
                                 </div>
                             </div>
                         )}
