@@ -406,6 +406,23 @@
             try {
                 if (rawJson && typeof rawJson === 'object' && !Array.isArray(rawJson)) {
                     
+                    // 【關鍵修正】優先處理含有 "books" 陣列的新譯本 (cnv_traditional.json)
+                    if (Array.isArray(rawJson.books)) {
+                        rawJson.books.forEach(bookData => {
+                            const bId = getBookId(bookData.book || bookData.book_name || bookData.name);
+                            if (bId) {
+                                (bookData.chapters || []).forEach(chData => {
+                                    const ch = chData.chapter;
+                                    ensurePath(bId, ch);
+                                    (chData.verses || []).forEach(vData => {
+                                        result[bId][ch][vData.verse] = vData.text || vData.original || vData;
+                                    });
+                                });
+                            }
+                        });
+                        return result;
+                    }
+
                     const firstKey = Object.keys(rawJson)[0];
                     if (!firstKey) return result;
 
@@ -975,8 +992,8 @@
 
               const qVariants = new Set([qClean]);
               if (isHebrewDict) {
-                  const prefixes = ['וכש', 'ומש', 'ולמ', 'וכה', 'ומה', 'ולה', 'ובש', 'וי', 'ות', 'וב', 'ול', 'וכ', 'ומ', 'וה', 'וש', 'כש', 'מש', 'למ', 'כה', 'מה', 'לה', 'בש', 'ו', 'ב', 'ל', 'כ', 'מ', 'ה', 'ש'];
-                  const suffixes = ['יהמ', 'יהנ', 'ינו', 'כמ', 'כנ', 'ימ', 'ות', 'נו', 'המ', 'הנ', 'תי', 'תמ', 'תנ', 'יו', 'ו', 'ה', 'י', 'כ', 'מ', 'נ', 'ת'];
+                  const prefixes = ['וכש', 'ומש', 'ولم', 'וכה', 'وמה', 'ולה', 'ובש', 'וי', 'ות', 'וב', 'ول', 'וכ', 'ומ', 'וה', 'וש', 'כש', 'מש', 'לม', 'כה', 'מה', 'له', 'בש', 'ו', 'ב', 'ל', 'כ', 'מ', 'ה', 'ש'];
+                  const suffixes = ['יהמ', 'יהנ', 'ינו', 'כמ', 'כנ', 'יม', 'ות', 'נו', 'המ', 'הנ', 'תי', 'תמ', 'תנ', 'יו', 'ו', 'ה', 'י', 'כ', 'מ', 'נ', 'ת'];
                   
                   let bases = [qClean];
                   for (let p of prefixes) {
@@ -1039,7 +1056,7 @@
                   if (score === 0) {
                       for (let variant of variantsArr) {
                           if (variant.length >= 2 && lemmaClean.length >= 2) {
-                              if (lemmaClean.length >= 3 && variant.includes(lemmaClean)) {
+                              if (variant.length >= 3 && variant.includes(lemmaClean)) {
                                   score = Math.max(score, 60);
                               } else if (variant.length >= 3 && lemmaClean.includes(variant)) {
                                   score = Math.max(score, 60);
@@ -1156,734 +1173,734 @@
                 setDictContext(null);
             }
 
-            setDictTarget(activeDict);
-            setDictQuery(clean); 
-            setDictResults(executeDictSearch(clean, activeDict, targetMorphInfo)); 
-            setDictOpen(true);
-          };
+          setDictTarget(activeDict);
+          setDictQuery(clean); 
+          setDictResults(executeDictSearch(clean, activeDict, targetMorphInfo)); 
+          setDictOpen(true);
+        };
 
-          const getVerseText = (verse, config) => {
-            const [lang, ver] = config.split('-');
-            if (lang === 'zh') return verse.chinese[ver]; if (lang === 'en') return verse.english[ver]; if (lang === 'orig') return verse.original[config];
-            return "[未知]";
-          };
+        const getVerseText = (verse, config) => {
+          const [lang, ver] = config.split('-');
+          if (lang === 'zh') return verse.chinese[ver]; if (lang === 'en') return verse.english[ver]; if (lang === 'orig') return verse.original[config];
+          return "[未知]";
+        };
 
-          const renderOriginal = (v, config, fs, isParagraphMode = false) => {
-              const text = v.original[config] || "";
-              if (!text || text.startsWith('[')) return <span style={{ fontSize: `${fs}px` }} className="text-slate-400 font-medium">尚未匯入</span>;
-              
-              const isHebrew = config === 'orig-wlc'; 
-              const dir = isHebrew ? 'rtl' : 'ltr';
-              
-              let words = [];
-              if (Array.isArray(text)) {
-                  words = text;
-              } else {
-                  words = text.split(/\s+/).filter(w => w).map(w => ({ text: w }));
-              }
-              
-              const renderedWords = words.map((wordObj, i) => {
-                  const wStr = wordObj.word || wordObj.text || wordObj; 
-                  return (
-                      <span key={i} onClick={() => handleWordClick(wStr, config, v, i)} className="inline-flex flex-col items-center cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded px-0.5 py-1 transition-colors group">
-                        <span style={{ fontSize: `${fs}px` }} className={`font-bold leading-none ${v.isOT ? 'text-indigo-900 dark:text-indigo-300' : 'text-emerald-900 dark:text-emerald-300'}`}>{wStr}</span>
-                        <span className="text-[9px] text-amber-800 dark:text-amber-500 italic mt-0.5 leading-none" dir="ltr">{autoTransliterate(wStr, isHebrew)}</span>
-                      </span>
-                  );
-              });
-              if (isParagraphMode) return <span className="inline-flex flex-wrap gap-x-1.5 gap-y-1 align-bottom mx-1" dir={dir}>{renderedWords}</span>;
-              return <div className={`flex flex-wrap gap-x-1 gap-y-2 content-start flex-1 ${dir === 'rtl' ? 'justify-start' : ''}`} dir={dir}>{renderedWords}</div>;
-          };
+        const renderOriginal = (v, config, fs, isParagraphMode = false) => {
+            const text = v.original[config] || "";
+            if (!text || text.startsWith('[')) return <span style={{ fontSize: `${fs}px` }} className="text-slate-400 font-medium">尚未匯入</span>;
+            
+            const isHebrew = config === 'orig-wlc'; 
+            const dir = isHebrew ? 'rtl' : 'ltr';
+            
+            let words = [];
+            if (Array.isArray(text)) {
+                words = text;
+            } else {
+                words = text.split(/\s+/).filter(w => w).map(w => ({ text: w }));
+            }
+            
+            const renderedWords = words.map((wordObj, i) => {
+                const wStr = wordObj.word || wordObj.text || wordObj; 
+                return (
+                    <span key={i} onClick={() => handleWordClick(wStr, config, v, i)} className="inline-flex flex-col items-center cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded px-0.5 py-1 transition-colors group">
+                      <span style={{ fontSize: `${fs}px` }} className={`font-bold leading-none ${v.isOT ? 'text-indigo-900 dark:text-indigo-300' : 'text-emerald-900 dark:text-emerald-300'}`}>{wStr}</span>
+                      <span className="text-[9px] text-amber-800 dark:text-amber-500 italic mt-0.5 leading-none" dir="ltr">{autoTransliterate(wStr, isHebrew)}</span>
+                    </span>
+                );
+            });
+            if (isParagraphMode) return <span className="inline-flex flex-wrap gap-x-1.5 gap-y-1 align-bottom mx-1" dir={dir}>{renderedWords}</span>;
+            return <div className={`flex flex-wrap gap-x-1 gap-y-2 content-start flex-1 ${dir === 'rtl' ? 'justify-start' : ''}`} dir={dir}>{renderedWords}</div>;
+        };
 
-          const getContextMorphology = () => {
-              if (!dictContext) return null;
-              
-              try {
-                  const { bookId, chapter, verseNum, wordIndex, version } = dictContext;
-                  
-                  let targetMorphDB = null;
-                  if (version === 'orig-wlc') targetMorphDB = loadedBibles['morph-wlc'];
-                  if (version === 'orig-na28') targetMorphDB = loadedBibles['morph-na28'];
-                  
-                  if (!targetMorphDB) return null;
-                  
-                  const bookData = targetMorphDB[bookId];
-                  if (!bookData) return null;
-                  
-                  const chapterData = bookData[chapter];
-                  if (!chapterData) return null;
-                  
-                  const verseData = chapterData[verseNum];
-                  if (!verseData) return null;
+        const getContextMorphology = () => {
+            if (!dictContext) return null;
+            
+            try {
+                const { bookId, chapter, verseNum, wordIndex, version } = dictContext;
+                
+                let targetMorphDB = null;
+                if (version === 'orig-wlc') targetMorphDB = loadedBibles['morph-wlc'];
+                if (version === 'orig-na28') targetMorphDB = loadedBibles['morph-na28'];
+                
+                if (!targetMorphDB) return null;
+                
+                const bookData = targetMorphDB[bookId];
+                if (!bookData) return null;
+                
+                const chapterData = bookData[chapter];
+                if (!chapterData) return null;
+                
+                const verseData = chapterData[verseNum];
+                if (!verseData) return null;
 
-                  let morphInfo = null;
-                  if (Array.isArray(verseData)) {
-                      const checkText = w => {
-                          const txt = w.text || w.word;
-                          return txt && txt.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() === dictContext.word;
-                      };
-                      morphInfo = verseData[wordIndex];
-                      if (morphInfo && !checkText(morphInfo)) {
-                          morphInfo = verseData.find(checkText) || null;
-                      } else if (!morphInfo) {
-                          morphInfo = verseData.find(checkText) || null;
-                      }
-                  } else if (typeof verseData === 'object') {
-                      morphInfo = verseData[wordIndex] || verseData[String(wordIndex)];
-                  }
-                  
-                  return morphInfo;
-              } catch (e) {
-                  return null;
-              }
-          };
+                let morphInfo = null;
+                if (Array.isArray(verseData)) {
+                    const checkText = w => {
+                        const txt = w.text || w.word;
+                        return txt && txt.replace(/[.,;·׃!?()[\]{}"'־…—\-]/g, '').trim() === dictContext.word;
+                    };
+                    morphInfo = verseData[wordIndex];
+                    if (morphInfo && !checkText(morphInfo)) {
+                        morphInfo = verseData.find(checkText) || null;
+                    } else if (!morphInfo) {
+                        morphInfo = verseData.find(checkText) || null;
+                    }
+                } else if (typeof verseData === 'object') {
+                    morphInfo = verseData[wordIndex] || verseData[String(wordIndex)];
+                }
+                
+                return morphInfo;
+            } catch (e) {
+                return null;
+            }
+        };
 
-          if (!appReady) return (
-            <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-950 text-white">
-              <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-              <div className="font-black tracking-widest animate-pulse">MANUSCRIPT SYNC</div>
-            </div>
-          );
+        if (!appReady) return (
+          <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-950 text-white">
+            <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <div className="font-black tracking-widest animate-pulse">MANUSCRIPT SYNC</div>
+          </div>
+        );
 
-          return (
-            <div className="h-[100dvh] flex flex-col overflow-hidden transition-colors duration-300 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
-              
-              {/* Toast 訊息欄 */}
-              {toastMsg && (
-                <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[200] bg-indigo-600 text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg flex items-center gap-2 animate-in slide-in-from-bottom">
-                    <Check className="w-4 h-4" /> {toastMsg} 
-                </div>
-              )}
+        return (
+          <div className="h-[100dvh] flex flex-col overflow-hidden transition-colors duration-300 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+            
+            {/* Toast 訊息欄 */}
+            {toastMsg && (
+              <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[200] bg-indigo-600 text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg flex items-center gap-2 animate-in slide-in-from-bottom">
+                  <Check className="w-4 h-4" /> {toastMsg} 
+              </div>
+            )}
 
-              {/* 導航側欄 */}
-              {isNavOpen && (
-                <div className="fixed inset-0 z-[150] bg-slate-50 dark:bg-slate-950 flex flex-col animate-in slide-in-from-bottom">
-                   <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900 sticky top-0 shadow-sm transition-colors">
-                      <button onClick={() => navStep === 'chapter' ? setNavStep('book') : setIsNavOpen(false)} className="w-10 h-10 flex items-center justify-center bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl active:scale-95 transition-colors">
-                         {navStep === 'chapter' ? <ChevronLeft className="text-slate-700 dark:text-slate-300"/> : <X className="text-slate-700 dark:text-slate-300"/>}
-                      </button>
-                      <h2 className="font-black text-lg text-slate-800 dark:text-slate-100">{navStep === 'book' ? '選擇書卷' : viewState.book}</h2>
-                      <div className="w-10"></div>
-                   </div>
-                   <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
-                      {navStep === 'book' ? (
-                        <div className="space-y-6 pb-20">
-                           {['OT', 'NT'].map(t => (
-                              <div key={t}>
-                                 <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 tracking-widest mb-3 px-1">{t === 'OT' ? '舊約 OLD TESTAMENT' : '新約 NEW TESTAMENT'}</h3>
-                                 <div className="grid grid-cols-4 gap-2">
-                                    {BIBLE_STRUCTURE[t].map(b => (
-                                       <button key={b.id} onClick={() => { setViewState(p => ({...p, book: b.name, bookId: b.id})); setNavStep('chapter'); }} className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all ${viewState.bookId === b.id ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200'}`}>
-                                          <span className="text-[11px] font-black">{b.name}</span>
-                                       </button>
-                                    ))}
-                                 </div>
-                              </div>
-                           ))}
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-5 gap-2 pb-20">
-                           {Array.from({ length: [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT].find(b => b.id === viewState.bookId).chapters }, (_, i) => i + 1).map(ch => (
-                              <button key={ch} onClick={() => { setViewState(p => ({...p, chapter: ch})); setIsNavOpen(false); }} className={`aspect-square flex items-center justify-center rounded-xl font-black border text-sm ${viewState.chapter === ch ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200'}`}>
-                                 {ch}
-                              </button>
-                           ))}
-                        </div>
-                      )}
-                   </div>
-                </div>
-              )}
-
-              {/* 字典彈窗 */}
-              {dictOpen && (
-                <div className="fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in">
-                   <div className="bg-white dark:bg-slate-900 w-full max-w-lg h-[80vh] sm:h-auto sm:max-h-[85vh] rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800 animate-in slide-in-from-bottom-4">
-                      <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
-                         <h3 className="font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                            <BookOpen className="w-5 h-5 text-indigo-500" /> 字典搜尋
-                         </h3>
-                         <select value={dictTarget} onChange={e => { setDictTarget(e.target.value); setDictResults(executeDictSearch(dictQuery, e.target.value, null)); }} className="text-[11px] font-black bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 outline-none text-indigo-600 dark:text-indigo-400 cursor-pointer">
-                            <option value="dict-wlc-strongs">WLC 希伯來字典</option>
-                            <option value="dict-lxx-strongs">LXX 七十士字典</option>
-                            <option value="dict-na28-strongs">NA28 形態學動態字典</option>
-                         </select>
-                         <button onClick={() => setDictOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
-                            <X className="w-4 h-4"/>
-                         </button>
+            {/* 導航側欄 */}
+            {isNavOpen && (
+              <div className="fixed inset-0 z-[150] bg-slate-50 dark:bg-slate-950 flex flex-col animate-in slide-in-from-bottom">
+                 <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900 sticky top-0 shadow-sm transition-colors">
+                    <button onClick={() => navStep === 'chapter' ? setNavStep('book') : setIsNavOpen(false)} className="w-10 h-10 flex items-center justify-center bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl active:scale-95 transition-colors">
+                       {navStep === 'chapter' ? <ChevronLeft className="text-slate-700 dark:text-slate-300"/> : <X className="text-slate-700 dark:text-slate-300"/>}
+                    </button>
+                    <h2 className="font-black text-lg text-slate-800 dark:text-slate-100">{navStep === 'book' ? '選擇書卷' : viewState.book}</h2>
+                    <div className="w-10"></div>
+                 </div>
+                 <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
+                    {navStep === 'book' ? (
+                      <div className="space-y-6 pb-20">
+                         {['OT', 'NT'].map(t => (
+                            <div key={t}>
+                               <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 tracking-widest mb-3 px-1">{t === 'OT' ? '舊約 OLD TESTAMENT' : '新約 NEW TESTAMENT'}</h3>
+                               <div className="grid grid-cols-4 gap-2">
+                                  {BIBLE_STRUCTURE[t].map(b => (
+                                     <button key={b.id} onClick={() => { setViewState(p => ({...p, book: b.name, bookId: b.id})); setNavStep('chapter'); }} className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all ${viewState.bookId === b.id ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200'}`}>
+                                        <span className="text-[11px] font-black">{b.name}</span>
+                                     </button>
+                                  ))}
+                               </div>
+                            </div>
+                         ))}
                       </div>
-                      <div className="p-4 flex flex-col gap-4 flex-1 overflow-hidden">
-                         <div className="flex gap-2 relative">
-                            <input value={dictQuery} onChange={e => { setDictQuery(e.target.value); setDictResults(executeDictSearch(e.target.value, dictTarget, null)); }} className="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-slate-200 outline-none focus:border-indigo-500" placeholder="輸入 Strong's 編號或單字..." />
-                            <div className="w-12 h-12 shrink-0 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><Search className="w-5 h-5" /></div>
-                         </div>
-                         <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 p-3 no-scrollbar relative">
-                            
-                            {/* 詳細文法分析區塊 */}
-                            {(() => {
-                                const contextMorph = getContextMorphology();
-                                if (contextMorph) {
-                                    const morphTags = parseMorphologyTags(contextMorph);
-                                    if (morphTags.length > 0) {
-                                        return (
-                                            <div className="mb-4 bg-indigo-50/50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800/50 rounded-xl p-4 shadow-sm relative overflow-hidden">
-                                                <div className="absolute -right-4 -top-4 opacity-5"><Info size={80}/></div>
-                                                <div className="flex items-center gap-2 mb-2 relative z-10">
-                                                    <Info className="w-4 h-4 text-indigo-500" />
-                                                    <span className="text-xs font-black text-indigo-700 dark:text-indigo-400">當前上下文經文解析 ({dictContext.bookId} {dictContext.chapter}:{dictContext.verseNum})</span>
-                                                </div>
-                                                <div className="flex flex-wrap gap-1.5 relative z-10">
+                    ) : (
+                      <div className="grid grid-cols-5 gap-2 pb-20">
+                         {Array.from({ length: [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT].find(b => b.id === viewState.bookId).chapters }, (_, i) => i + 1).map(ch => (
+                            <button key={ch} onClick={() => { setViewState(p => ({...p, chapter: ch})); setIsNavOpen(false); }} className={`aspect-square flex items-center justify-center rounded-xl font-black border text-sm ${viewState.chapter === ch ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200'}`}>
+                               {ch}
+                            </button>
+                         ))}
+                      </div>
+                    )}
+                 </div>
+              </div>
+            )}
+
+            {/* 字典彈窗 */}
+            {dictOpen && (
+              <div className="fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in">
+                 <div className="bg-white dark:bg-slate-900 w-full max-w-lg h-[80vh] sm:h-auto sm:max-h-[85vh] rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800 animate-in slide-in-from-bottom-4">
+                    <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+                       <h3 className="font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                          <BookOpen className="w-5 h-5 text-indigo-500" /> 字典搜尋
+                       </h3>
+                       <select value={dictTarget} onChange={e => { setDictTarget(e.target.value); setDictResults(executeDictSearch(dictQuery, e.target.value, null)); }} className="text-[11px] font-black bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 outline-none text-indigo-600 dark:text-indigo-400 cursor-pointer">
+                          <option value="dict-wlc-strongs">WLC 希伯來字典</option>
+                          <option value="dict-lxx-strongs">LXX 七十士字典</option>
+                          <option value="dict-na28-strongs">NA28 形態學動態字典</option>
+                       </select>
+                       <button onClick={() => setDictOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+                          <X className="w-4 h-4"/>
+                       </button>
+                    </div>
+                    <div className="p-4 flex flex-col gap-4 flex-1 overflow-hidden">
+                       <div className="flex gap-2 relative">
+                          <input value={dictQuery} onChange={e => { setDictQuery(e.target.value); setDictResults(executeDictSearch(e.target.value, dictTarget, null)); }} className="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-slate-200 outline-none focus:border-indigo-500" placeholder="輸入 Strong's 編號或單字..." />
+                          <div className="w-12 h-12 shrink-0 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><Search className="w-5 h-5" /></div>
+                       </div>
+                       <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 p-3 no-scrollbar relative">
+                          
+                          {/* 詳細文法分析區塊 */}
+                          {(() => {
+                              const contextMorph = getContextMorphology();
+                              if (contextMorph) {
+                                  const morphTags = parseMorphologyTags(contextMorph);
+                                  if (morphTags.length > 0) {
+                                      return (
+                                          <div className="mb-4 bg-indigo-50/50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800/50 rounded-xl p-4 shadow-sm relative overflow-hidden">
+                                              <div className="absolute -right-4 -top-4 opacity-5"><Info size={80}/></div>
+                                              <div className="flex items-center gap-2 mb-2 relative z-10">
+                                                  <Info className="w-4 h-4 text-indigo-500" />
+                                                  <span className="text-xs font-black text-indigo-700 dark:text-indigo-400">當前上下文經文解析 ({dictContext.bookId} {dictContext.chapter}:{dictContext.verseNum})</span>
+                                              </div>
+                                              <div className="flex flex-wrap gap-1.5 relative z-10">
+                                                  {morphTags.map((tag, tIdx) => (
+                                                      <span key={tIdx} className={`text-[11px] font-bold px-2.5 py-1 rounded-md shadow-sm ${
+                                                          tag.includes('詞') || tag.includes('功能') ? 'bg-indigo-600 text-white' :
+                                                          tag.includes('性') || tag.includes('數') || tag.includes('單複') ? 'bg-emerald-50 text-white' :
+                                                          tag.includes('式') || tag.includes('語氣') || tag.includes('時態') || tag.includes('語態') || tag.includes('身') ? 'bg-amber-50 text-white' :
+                                                          tag.includes('格') ? 'bg-sky-50 text-white' :
+                                                          'bg-slate-700 text-white'
+                                                      }`}>
+                                                          {tag}
+                                                      </span>
+                                                  ))}
+                                              </div>
+                                              {/* 支援 NA28 形態學資料中的 lemma 或新版 WLC */}
+                                              {typeof contextMorph === 'object' && (contextMorph.lemma || (contextMorph.lexicon && contextMorph.lexicon.lemma)) && (
+                                                  <div className="mt-2 text-xs font-medium text-slate-500 dark:text-slate-400 relative z-10">
+                                                      原型字: <span className="font-bold text-slate-700 dark:text-slate-300">{contextMorph.lemma || contextMorph.lexicon.lemma}</span>
+                                                  </div>
+                                              )}
+                                          </div>
+                                      );
+                                  }
+                              }
+                              return null;
+                          })()}
+
+
+                          {!loadedBibles[dictTarget] && dictResults.length === 0 ? (
+                              <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs font-bold text-center px-4">
+                                  <Database className="w-8 h-8 mb-3 opacity-50" />請先在「設定」頁面匯入<br/>對應的語言數據庫檔案。
+                              </div>
+                          ) : dictResults.length === 0 ? (
+                              <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs font-bold text-center py-10">
+                                  找不到相符的字詞。<br/><span className="text-[10px] font-normal mt-2 opacity-70">原文字詞變化太多，建議縮短搜尋字串。</span>
+                              </div>
+                          ) : (
+                              <div className="space-y-3">
+                                 {dictResults.map((r, i) => (
+                                     <div key={i} className={`bg-white dark:bg-slate-900 border ${r.isSynthesized ? 'border-indigo-400 dark:border-indigo-600' : 'border-slate-200 dark:border-slate-800'} rounded-lg p-3 shadow-sm relative overflow-hidden`}>
+                                        {r.isSynthesized && (
+                                            <div className="absolute top-0 right-0 bg-indigo-500 text-white text-[9px] font-black px-2 py-0.5 rounded-bl-lg opacity-80">{r.source || '內建解析'}</div>
+                                        )}
+                                        <div className="flex justify-between items-start mb-2">
+                                           <div className="flex items-center gap-2">
+                                              <span className="text-sm font-black text-indigo-700 dark:text-indigo-400">
+                                                  {r.word || r.text ? (
+                                                      <Fragment>{r.word || r.text} {r.lemma && <span className="text-[11px] font-normal text-indigo-500 ml-1">({r.lemma})</span>}</Fragment>
+                                                  ) : (
+                                                      r.lemma || r.strongs
+                                                  )}
+                                              </span>
+                                              {/* 核心修改 1：確保橙色字優先顯示英文字義 (gloss || english || transliteration) */}
+                                              <span className="text-xs italic text-amber-600 dark:text-amber-500">{r.gloss || r.english || r.transliteration}</span>
+                                           </div>
+                                           <span className="text-[10px] font-black bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-500">{r.strongs || '無編號'}</span>
+                                        </div>
+                                        
+                                        {(() => {
+                                            const morphTags = parseMorphologyTags(r);
+                                            if (morphTags.length === 0) return null;
+                                            return (
+                                                <div className="flex flex-wrap gap-1.5 mb-2.5">
                                                     {morphTags.map((tag, tIdx) => (
-                                                        <span key={tIdx} className={`text-[11px] font-bold px-2.5 py-1 rounded-md shadow-sm ${
-                                                            tag.includes('詞') || tag.includes('功能') ? 'bg-indigo-600 text-white' :
-                                                            tag.includes('性') || tag.includes('數') || tag.includes('單複') ? 'bg-emerald-500 text-white' :
-                                                            tag.includes('式') || tag.includes('語氣') || tag.includes('時態') || tag.includes('語態') || tag.includes('身') ? 'bg-amber-500 text-white' :
-                                                            tag.includes('格') ? 'bg-sky-500 text-white' :
-                                                            'bg-slate-700 text-white'
+                                                        <span key={tIdx} className={`text-[10px] font-bold px-2 py-0.5 rounded border shadow-sm ${
+                                                            tag.includes('詞') || tag.includes('功能') ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-700/50' :
+                                                            tag.includes('性') || tag.includes('數') || tag.includes('單複') ? 'bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700/50' :
+                                                            tag.includes('式') || tag.includes('語氣') || tag.includes('時態') || tag.includes('語態') || tag.includes('身') ? 'bg-amber-50 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-700/50' :
+                                                            tag.includes('格') ? 'bg-sky-50 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-700/50' :
+                                                            'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                                                         }`}>
                                                             {tag}
                                                         </span>
                                                     ))}
                                                 </div>
-                                                {/* 支援 NA28 形態學資料中的 lemma 或新版 WLC */}
-                                                {typeof contextMorph === 'object' && (contextMorph.lemma || (contextMorph.lexicon && contextMorph.lexicon.lemma)) && (
-                                                    <div className="mt-2 text-xs font-medium text-slate-500 dark:text-slate-400 relative z-10">
-                                                        原型字: <span className="font-bold text-slate-700 dark:text-slate-300">{contextMorph.lemma || contextMorph.lexicon.lemma}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    }
-                                }
-                                return null;
-                            })()}
+                                            );
+                                        })()}
 
-
-                            {!loadedBibles[dictTarget] && dictResults.length === 0 ? (
-                                <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs font-bold text-center px-4">
-                                    <Database className="w-8 h-8 mb-3 opacity-50" />請先在「設定」頁面匯入<br/>對應的語言數據庫檔案。
-                                </div>
-                            ) : dictResults.length === 0 ? (
-                                <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs font-bold text-center py-10">
-                                    找不到相符的字詞。<br/><span className="text-[10px] font-normal mt-2 opacity-70">原文字詞變化太多，建議縮短搜尋字串。</span>
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                   {dictResults.map((r, i) => (
-                                       <div key={i} className={`bg-white dark:bg-slate-900 border ${r.isSynthesized ? 'border-indigo-400 dark:border-indigo-600' : 'border-slate-200 dark:border-slate-800'} rounded-lg p-3 shadow-sm relative overflow-hidden`}>
-                                          {r.isSynthesized && (
-                                              <div className="absolute top-0 right-0 bg-indigo-500 text-white text-[9px] font-black px-2 py-0.5 rounded-bl-lg opacity-80">{r.source || '內建解析'}</div>
-                                          )}
-                                          <div className="flex justify-between items-start mb-2">
-                                             <div className="flex items-center gap-2">
-                                                <span className="text-sm font-black text-indigo-700 dark:text-indigo-400">
-                                                    {r.word || r.text ? (
-                                                        <Fragment>{r.word || r.text} {r.lemma && <span className="text-[11px] font-normal text-indigo-500 ml-1">({r.lemma})</span>}</Fragment>
-                                                    ) : (
-                                                        r.lemma || r.strongs
-                                                    )}
-                                                </span>
-                                                {/* 核心修改 1：確保橙色字優先顯示英文字義 (gloss || english || transliteration) */}
-                                                <span className="text-xs italic text-amber-600 dark:text-amber-500">{r.gloss || r.english || r.transliteration}</span>
-                                             </div>
-                                             <span className="text-[10px] font-black bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-500">{r.strongs || '無編號'}</span>
-                                          </div>
-                                          
-                                          {(() => {
-                                              const morphTags = parseMorphologyTags(r);
-                                              if (morphTags.length === 0) return null;
-                                              return (
-                                                  <div className="flex flex-wrap gap-1.5 mb-2.5">
-                                                      {morphTags.map((tag, tIdx) => (
-                                                          <span key={tIdx} className={`text-[10px] font-bold px-2 py-0.5 rounded border shadow-sm ${
-                                                              tag.includes('詞') || tag.includes('功能') ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-700/50' :
-                                                              tag.includes('性') || tag.includes('數') || tag.includes('單複') ? 'bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700/50' :
-                                                              tag.includes('式') || tag.includes('語氣') || tag.includes('時態') || tag.includes('語態') || tag.includes('身') ? 'bg-amber-50 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-700/50' :
-                                                              tag.includes('格') ? 'bg-sky-50 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-700/50' :
-                                                              'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                                                          }`}>
-                                                              {tag}
-                                                          </span>
-                                                      ))}
-                                                  </div>
-                                              );
-                                          })()}
-
-                                          {/* 核心修改 2：加入 r.definition !== r.strongs_definition 避免完全相同的文字被印出兩次 */}
-                                          {r.strongs_definition && <p className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed"><span className="text-slate-400 font-normal mr-1">定義:</span> {r.strongs_definition}</p>}
-                                          {r.definition && r.definition !== r.strongs_definition && <div className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed mt-1" dangerouslySetInnerHTML={{ __html: r.definition.includes('<span') ? r.definition : `<span class="text-slate-400 font-normal mr-1">定義:</span> ${r.definition}` }} />}
-                                          {r.derivation && r.derivation.toUpperCase() !== 'N/A' && r.derivation.toUpperCase() !== 'NONE' && <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mt-1"><span className="font-normal mr-1">字源:</span> {r.derivation}</p>}
-                                          {r.kjv_definition && <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mt-1"><span className="font-normal mr-1">KJV:</span> {r.kjv_definition}</p>}
-                                          {(r.gloss || r.english) && !r.strongs_definition && (!r.definition || r.isSynthesized) && <p className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed mt-1"><span className="text-slate-400 font-normal mr-1">簡義:</span> {r.gloss || r.english}</p>}
-                                       </div>
-                                   ))}
-                                </div>
-                            )}
-                         </div>
-                      </div>
-                   </div>
-                </div>
-              )}
-
-              {/* 標頭 */}
-              <header className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 px-2 py-2 z-50 shrink-0 shadow-sm">
-                <div className="flex justify-between items-center max-w-lg mx-auto w-full gap-1">
-                   <div className="flex items-center gap-1 flex-1 min-w-0">
-                      <button onClick={() => { setIsNavOpen(true); setNavStep('book'); }} className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-1.5 h-[34px] rounded-lg border border-slate-200 dark:border-slate-700 shrink-0 max-w-[100px] min-w-0">
-                         <Menu className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0"/>
-                         <span className="font-black text-[12px] text-slate-700 dark:text-slate-200 truncate">{viewState.book} {viewState.chapter}</span>
-                         <ChevronDown className="w-3 h-3 text-slate-400 shrink-0"/>
-                      </button>
-
-                      {(activeTab === 'read' || activeTab === 'search') && (
-                         <Fragment>
-                            <div className="flex items-center bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 h-[34px] shrink-0">
-                               <button onClick={() => setFontSize(s => Math.max(12, s-1))} className="px-1.5 h-full text-slate-500 font-bold text-xs">-</button>
-                               <span className="text-[11px] font-black w-4 text-center text-slate-700 dark:text-slate-300">{fontSize}</span>
-                               <button onClick={() => setFontSize(s => Math.min(32, s+1))} className="px-1.5 h-full text-slate-500 font-bold text-xs">+</button>
-                            </div>
-                            
-                            <div className="relative shrink-0 w-[95px]">
-                               <select value={readVersion} onChange={e => { setReadVersion(e.target.value); if(activeTab==='search') setBibleSearchResults([]); }} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-black text-indigo-600 dark:text-indigo-400 h-[34px] pl-1.5 pr-4 appearance-none outline-none truncate cursor-pointer">
-                                  <optgroup label="中文"><option value="zh-cuv">和合本 (CUV)</option><option value="zh-lzz">呂振中 (LZZ)</option><option value="zh-ncv">新譯本 (NCV)</option></optgroup>
-                                  <optgroup label="英文"><option value="en-niv">NIV</option><option value="en-nasb">NASB</option><option value="en-kjv">KJV</option></optgroup>
-                                  <optgroup label="原文">
-                                     {currentIsOT ? (
-                                         <Fragment>
-                                             <option value="orig-wlc">WLC 希伯來</option>
-                                             <option value="orig-lxx">LXX 七十士</option>
-                                         </Fragment>
-                                     ) : (
-                                         <option value="orig-na28">NA28 新約</option>
-                                     )}
-                                  </optgroup>
-                                </select>
-                               <ChevronDown className="w-3 h-3 text-indigo-400 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none" />
-                            </div>
-                         </Fragment>
-                      )}
-                   </div>
-
-                   <div className="flex gap-1 shrink-0">
-                      {activeTab === 'read' ? (
-                         <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 h-[34px] items-center">
-                            <button onClick={() => setReadingMode('verse')} className={`p-1 rounded-md ${readingMode === 'verse' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}><AlignLeft className="w-3.5 h-3.5"/></button>
-                            <button onClick={() => setReadingMode('paragraph')} className={`p-1 rounded-md ${readingMode === 'paragraph' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}><AlignJustify className="w-3.5 h-3.5"/></button>
-                         </div>
-                      ) : activeTab === 'compare' ? (
-                         <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 h-[34px] items-center">
-                            <button onClick={() => setLayoutMode('vertical')} className={`p-1 rounded-md ${layoutMode === 'vertical' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}><List className="w-3.5 h-3.5" /></button>
-                            <button onClick={() => setLayoutMode('horizontal')} className={`p-1 rounded-md ${layoutMode === 'horizontal' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}><Columns className="w-3.5 h-3.5" /></button>
-                         </div>
-                      ) : null}
-                      <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-[34px] h-[34px] flex items-center justify-center rounded-lg border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
-                         {isDarkMode ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-slate-500" />}
-                      </button>
-                   </div>
-                </div>
-              </header>
-
-              {/* 主內容區 */}
-              <main ref={mainRef} className="flex-1 overflow-y-auto max-w-lg mx-auto w-full relative no-scrollbar">
-                 {activeTab === 'home' && (
-                    <div className="px-6 py-10 flex flex-col h-full animate-in fade-in">
-                       <div className="flex flex-col items-center justify-center py-10 gap-4 mb-8 border-b border-slate-200 dark:border-slate-800 pb-12">
-                          <div className="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center shadow-lg relative">
-                             <Book className="w-10 h-10 text-white" />
-                             <Sparkles className="absolute -top-2 -right-2 text-amber-400 w-6 h-6 animate-pulse" />
-                          </div>
-                          <h1 className="text-xl font-black tracking-widest text-slate-800 dark:text-slate-100 uppercase mt-2">Bible Explorer</h1>
-                          <p className="text-[10px] font-bold text-slate-400">聖經原文對照探索器</p>
-                       </div>
-                       <div className="flex-1">
-                          <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Bookmark className="w-4 h-4"/> 最近書籤</h3>
-                          {bookmarks.length > 0 ? (
-                            <div className="space-y-3 pb-20">
-                              {bookmarks.slice(-10).reverse().map(b => (
-                                <div key={b.id} onClick={() => { setViewState({ book: b.book, bookId: b.bookId, chapter: b.chapter }); setActiveTab('read'); }} className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm cursor-pointer">
-                                   <div className="flex justify-between items-start mb-2">
-                                      <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400">{b.book} {b.chapter}:{b.verse}</span>
-                                      <button onClick={(e) => { e.stopPropagation(); toggleBookmark({verseNum: b.verse}); }} className="text-slate-300 hover:text-red-500"><X className="w-4 h-4"/></button>
-                                   </div>
-                                   <div className="text-sm font-bold text-slate-700 dark:text-slate-300 line-clamp-2">{b.text}</div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="py-10 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl text-center text-xs text-slate-400 font-bold bg-white dark:bg-slate-900">尚無書籤，讀經時點擊書籤圖示即可加入</div>
+                                        {/* 核心修改 2：加入 r.definition !== r.strongs_definition 避免完全相同的文字被印出兩次 */}
+                                        {r.strongs_definition && <p className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed"><span className="text-slate-400 font-normal mr-1">定義:</span> {r.strongs_definition}</p>}
+                                        {r.definition && r.definition !== r.strongs_definition && <div className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed mt-1" dangerouslySetInnerHTML={{ __html: r.definition.includes('<span') ? r.definition : `<span class="text-slate-400 font-normal mr-1">定義:</span> ${r.definition}` }} />}
+                                        {r.derivation && r.derivation.toUpperCase() !== 'N/A' && r.derivation.toUpperCase() !== 'NONE' && <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mt-1"><span className="font-normal mr-1">字源:</span> {r.derivation}</p>}
+                                        {r.kjv_definition && <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mt-1"><span className="font-normal mr-1">KJV:</span> {r.kjv_definition}</p>}
+                                        {(r.gloss || r.english) && !r.strongs_definition && (!r.definition || r.isSynthesized) && <p className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed mt-1"><span className="text-slate-400 font-normal mr-1">簡義:</span> {r.gloss || r.english}</p>}
+                                     </div>
+                                 ))}
+                              </div>
                           )}
                        </div>
                     </div>
-                 )}
+                 </div>
+              </div>
+            )}
 
-                 {activeTab === 'read' && (
-                    <div className="px-4 py-6 pb-40">
-                       {fetching ? (
-                          <div className="flex flex-col items-center justify-center py-32 text-indigo-400 gap-4">
-                             <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+            {/* 標頭 */}
+            <header className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 px-2 py-2 z-50 shrink-0 shadow-sm">
+              <div className="flex justify-between items-center max-w-lg mx-auto w-full gap-1">
+                 <div className="flex items-center gap-1 flex-1 min-w-0">
+                    <button onClick={() => { setIsNavOpen(true); setNavStep('book'); }} className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-1.5 h-[34px] rounded-lg border border-slate-200 dark:border-slate-700 shrink-0 max-w-[100px] min-w-0">
+                       <Menu className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0"/>
+                       <span className="font-black text-[12px] text-slate-700 dark:text-slate-200 truncate">{viewState.book} {viewState.chapter}</span>
+                       <ChevronDown className="w-3 h-3 text-slate-400 shrink-0"/>
+                    </button>
+
+                    {(activeTab === 'read' || activeTab === 'search') && (
+                       <Fragment>
+                          <div className="flex items-center bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 h-[34px] shrink-0">
+                             <button onClick={() => setFontSize(s => Math.max(12, s-1))} className="px-1.5 h-full text-slate-500 font-bold text-xs">-</button>
+                             <span className="text-[11px] font-black w-4 text-center text-slate-700 dark:text-slate-300">{fontSize}</span>
+                             <button onClick={() => setFontSize(s => Math.min(32, s+1))} className="px-1.5 h-full text-slate-500 font-bold text-xs">+</button>
                           </div>
-                       ) : (
-                          <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-sm text-justify">
-                             {readingMode === 'verse' ? (
-                               <div className="space-y-4">
-                                 {verses.map(v => (
-                                   <div key={v.verseNum} className="relative group">
-                                      <div className="flex items-start">
-                                         <span className="text-indigo-500 font-black mr-2 text-[11px] px-1.5 py-0.5 rounded shrink-0 relative top-[2px]">{v.verseNum}</span>
-                                         {readVersion.startsWith('orig') ? renderOriginal(v, readVersion, fontSize, false) : (
-                                            <span style={{ fontSize: `${fontSize}px` }} className="text-slate-800 dark:text-slate-200 font-medium leading-relaxed flex-1">{getVerseText(v, readVersion)}</span>
-                                         )}
-                                         <button onClick={() => toggleBookmark(v)} className={`ml-2 p-1 rounded-full shrink-0 ${isBookmarked(v.verseNum) ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' : 'text-slate-200 dark:text-slate-700'}`}>
-                                            {isBookmarked(v.verseNum) ? <LucideIcon name="bookmark-check" className="w-4 h-4"/> : <Bookmark className="w-4 h-4"/>}
-                                         </button>
-                                      </div>
-                                   </div>
-                                 ))}
-                               </div>
-                             ) : (
-                               <>
-                                 {verses.map((v, idx) => (
-                                   <Fragment key={v.verseNum}>
-                                      {(v.paragraphStart && idx !== 0) && <div className="w-full h-1.5 flex shrink-0"></div>}
-                                      <span className="inline">
-                                         <span className="text-indigo-500 font-black mx-1 text-[11px] px-1.5 py-0.5 rounded relative bottom-[2px]">{v.verseNum}</span>
-                                         {readVersion.startsWith('orig') ? renderOriginal(v, readVersion, fontSize, true) : (
-                                            <span style={{ fontSize: `${fontSize}px` }} className="text-slate-800 dark:text-slate-200 font-medium leading-loose">{getVerseText(v, readVersion)}</span>
-                                         )}
-                                         <button onClick={() => toggleBookmark(v)} className={`inline-flex align-middle mx-1 -mt-1 ${isBookmarked(v.verseNum) ? 'text-amber-500' : 'text-slate-200 dark:text-slate-700'}`}>
-                                            {isBookmarked(v.verseNum) ? <LucideIcon name="bookmark-check" className="w-3.5 h-3.5"/> : <Bookmark className="w-3.5 h-3.5"/>}
-                                         </button>
-                                      </span>
-                                   </Fragment>
-                                 ))}
-                               </>
-                             )}
+                          
+                          <div className="relative shrink-0 w-[95px]">
+                             <select value={readVersion} onChange={e => { setReadVersion(e.target.value); if(activeTab==='search') setBibleSearchResults([]); }} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-black text-indigo-600 dark:text-indigo-400 h-[34px] pl-1.5 pr-4 appearance-none outline-none truncate cursor-pointer">
+                                <optgroup label="中文"><option value="zh-cuv">和合本 (CUV)</option><option value="zh-lzz">呂振中 (LZZ)</option><option value="zh-ncv">新譯本 (NCV)</option></optgroup>
+                                <optgroup label="英文"><option value="en-niv">NIV</option><option value="en-nasb">NASB</option><option value="en-kjv">KJV</option></optgroup>
+                                <optgroup label="原文">
+                                   {currentIsOT ? (
+                                       <Fragment>
+                                           <option value="orig-wlc">WLC 希伯來</option>
+                                           <option value="orig-lxx">LXX 七十士</option>
+                                       </Fragment>
+                                   ) : (
+                                       <option value="orig-na28">NA28 新約</option>
+                                   )}
+                                </optgroup>
+                              </select>
+                             <ChevronDown className="w-3 h-3 text-indigo-400 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none" />
                           </div>
-                       )}
-                    </div>
-                 )}
+                       </Fragment>
+                    )}
+                 </div>
 
-                 {activeTab === 'compare' && (
-                    <div className="px-4 py-6 space-y-5 pb-40">
-                       {fetching ? (
-                          <div className="flex flex-col items-center justify-center py-32"><div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div></div>
-                       ) : (
-                          verses.map(verse => (
-                          <div key={verse.verseNum} className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
-                             <div className="px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
-                                <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Verse {verse.verseNum}</span>
-                                <button onClick={() => toggleBookmark(verse)} className={isBookmarked(verse.verseNum) ? 'text-amber-500' : 'text-slate-300 dark:text-slate-600'}>
-                                   {isBookmarked(verse.verseNum) ? <LucideIcon name="bookmark-check" className="w-4 h-4"/> : <Bookmark className="w-4 h-4"/>}
-                                </button>
-                             </div>
-                             <div className="p-4 sm:p-5">
-                                {layoutMode === 'vertical' ? (
-                                   <div className="space-y-4">
-                                      {verticalSlots.map((slot, sIdx) => (
-                                         <div key={sIdx} className={sIdx > 0 ? "pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-2" : "flex flex-col sm:flex-row gap-2"}>
-                                            <div className="flex flex-col gap-1.5 mb-1 shrink-0 w-auto sm:w-24">
-                                               <select value={slot} onChange={(e) => { const n = [...verticalSlots]; n[sIdx] = e.target.value; setVerticalSlots(n); }} className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-transparent border-none p-0 cursor-pointer outline-none">
-                                                  <optgroup label="中文"><option value="zh-cuv">和合本</option><option value="zh-lzz">呂振中</option><option value="zh-ncv">新譯本</option></optgroup>
-                                                  <optgroup label="英文"><option value="en-niv">NIV</option><option value="en-nasb">NASB</option><option value="en-kjv">KJV</option></optgroup>
-                                                  <optgroup label="原文">
-                                                     {currentIsOT ? (
-                                                         <Fragment>
-                                                             <option value="orig-wlc">WLC 希伯來文</option>
-                                                             <option value="orig-lxx">LXX 七十士</option>
-                                                         </Fragment>
-                                                     ) : (
-                                                         <option value="orig-na28">NA28 新約</option>
-                                                     )}
-                                                  </optgroup>
-                                               </select>
-                                            </div>
-                                            <div className="flex-1 w-full">
-                                                {slot.startsWith('orig') ? renderOriginal(verse, slot, fontSize, false) : (
-                                                   <p style={{ fontSize: `${fontSize}px` }} className={`w-full ${slot.startsWith('en') ? 'italic font-serif text-slate-600 dark:text-slate-400' : 'font-bold text-slate-800 dark:text-slate-200'} leading-relaxed`}>{getVerseText(verse, slot)}</p>
-                                                )}
-                                            </div>
-                                         </div>
-                                      ))}
-                                   </div>
-                                ) : (
-                                   <div className="grid grid-cols-3 gap-2 min-w-0 w-full overflow-hidden">
-                                      <div className="border-r border-slate-100 dark:border-slate-800 pr-1.5 flex flex-col min-w-0">
-                                         <div className="mb-2 shrink-0">
-                                            <select value={horizVersions.zh} onChange={e => setHorizVersions({...horizVersions, zh: e.target.value})} className="text-[9px] font-black text-slate-500 bg-slate-100 dark:bg-slate-800 rounded py-0.5 px-1 outline-none cursor-pointer max-w-full truncate">
-                                               <option value="cuv">和合本</option><option value="lzz">呂振中</option><option value="ncv">新譯本</option>
-                                            </select>
-                                         </div>
-                                         <p style={{ fontSize: `${Math.max(11, fontSize - 3)}px` }} className="font-bold text-slate-800 dark:text-slate-200 leading-relaxed break-all">{verse.chinese[horizVersions.zh] || "尚未匯入"}</p>
-                                      </div>
-                                      
-                                      <div className="border-r border-slate-100 dark:border-slate-800 pr-1.5 flex flex-col min-w-0">
-                                         <div className="mb-2 shrink-0">
-                                            <select value={horizVersions.en} onChange={e => setHorizVersions({...horizVersions, en: e.target.value})} className="text-[9px] font-black text-slate-500 bg-slate-100 dark:bg-slate-800 rounded py-0.5 px-1 outline-none cursor-pointer max-w-full truncate">
-                                               <option value="niv">NIV</option><option value="nasb">NASB</option><option value="kjv">KJV</option>
-                                            </select>
-                                         </div>
-                                         <p style={{ fontSize: `${Math.max(11, fontSize - 3)}px` }} className="italic font-serif text-slate-600 dark:text-slate-400 leading-relaxed break-all">{verse.english[horizVersions.en] || "尚未匯入"}</p>
-                                      </div>
-                                      
-                                      <div className="flex flex-col min-w-0">
-                                         <div className="mb-2 shrink-0">
-                                            <select value={horizVersions.orig} onChange={e => setHorizVersions({...horizVersions, orig: e.target.value})} className="text-[9px] font-black text-amber-600 bg-amber-50 dark:bg-amber-900/20 rounded py-0.5 px-1 outline-none cursor-pointer max-w-full truncate">
-                                                {currentIsOT ? (
-                                                    <Fragment>
-                                                        <option value="orig-wlc">WLC 希伯來</option>
-                                                        <option value="orig-lxx">LXX 七十士</option>
-                                                    </Fragment>
-                                                ) : (
-                                                    <option value="orig-na28">NA28 新約</option>
-                                                )}
-                                            </select>
-                                         </div>
-                                         <div className="w-full min-w-0 break-all">{renderOriginal(verse, horizVersions.orig, Math.max(11, fontSize - 3), false)}</div>
-                                      </div>
-                                   </div>
-                                )}
-                             </div>
-                          </div>
-                          ))
-                       )}
-                    </div>
-                 )}
-
-                 {/* 搜尋分頁 */}
-                 {activeTab === 'search' && (
-                    <div className="px-4 py-6 flex flex-col h-full animate-in fade-in pb-40">
-                        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm sticky top-0 z-10 flex gap-2 mb-4">
-                            <input 
-                                value={bibleSearchQuery}
-                                onChange={e => handleBibleSearch(e.target.value)}
-                                className="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-slate-200 outline-none focus:border-indigo-500"
-                                placeholder={`在目前 [${readVersion.toUpperCase()}] 譯本中搜尋字眼...`}
-                            />
-                            <div className="w-12 h-12 shrink-0 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
-                                <Search className="w-5 h-5" />
-                            </div>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto no-scrollbar space-y-3">
-                            {!loadedBibles[readVersion] ? (
-                                <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs font-bold text-center py-20">
-                                    當前選擇的譯本 [{readVersion.toUpperCase()}] 尚未有經文，<br/>請先到設定頁面匯入 JSON 檔。
-                                </div>
-                            ) : bibleSearchQuery.trim() === "" ? (
-                                <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs font-bold text-center py-20">
-                                    請輸入文字關鍵字開始全面檢索聖經。
-                                </div>
-                            ) : bibleSearchResults.length === 0 ? (
-                                <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs font-bold text-center py-20">
-                                    找不到包含「{bibleSearchQuery}」的經文節數。
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="text-[11px] font-black text-slate-400 px-1 uppercase tracking-wider">找到 {bibleSearchResults.length === 80 ? '80+' : bibleSearchResults.length} 處相符經文：</div>
-                                    {bibleSearchResults.map(res => (
-                                        <div 
-                                            key={res.id} 
-                                            onClick={() => {
-                                                setViewState({ book: res.bookName, bookId: res.bookId, chapter: res.chapter });
-                                                setActiveTab('read');
-                                            }}
-                                            className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm cursor-pointer hover:border-indigo-400 active:scale-[0.99] transition-all"
-                                        >
-                                            <div className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 mb-1">{res.bookName} 第 {res.chapter} 章 {res.verse} 節</div>
-                                            <div style={{ fontSize: `${fontSize}px` }} className="text-slate-800 dark:text-slate-200 leading-relaxed font-medium">{res.text}</div>
-                                        </div>
-                                    ))}
-                                </>
-                            )}
-                        </div>
-                    </div>
-                 )}
-
-                 {activeTab === 'settings' && (
-                    <div className="px-6 py-10 flex flex-col h-full animate-in fade-in overflow-y-auto pb-40 no-scrollbar">
-                       <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-widest uppercase mb-8">Settings</h2>
-                       <div className="space-y-6">
-                          {/* 深色模式 */}
-                          <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
-                             <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-4">
-                                   <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center">
-                                      {isDarkMode ? <Moon className="w-3.5 h-3.5 text-indigo-400" /> : <Sun className="w-3.5 h-3.5 text-amber-500" />}
-                                   </div>
-                                   <div>
-                                      <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm">深色模式 (Dark Mode)</h3>
-                                   </div>
-                                </div>
-                                <button onClick={() => setIsDarkMode(!isDarkMode)} className={`w-14 h-8 rounded-full relative flex items-center px-1 ${isDarkMode ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700'}`}>
-                                   <div className={`w-6 h-6 bg-white rounded-full shadow transition-transform duration-300 ${isDarkMode ? 'translate-x-6' : 'translate-x-0'}`} />
-                                </button>
-                             </div>
-                          </div>
-
-                          {/* 本地資料庫管理 */}
-                          <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
-                             <div className="flex items-center gap-3 mb-6">
-                                <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center"><Database className="w-5 h-5 text-indigo-600"/></div>
-                                <div>
-                                   <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm">本地資料庫 (Local Database)</h3>
-                                   <p className="text-xs text-slate-500 mt-0.5">管理手機內部離線聖經儲存</p>
-                                </div>
-                             </div>
-                             
-                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6">
-                                {[
-                                  { id: 'zh-cuv', label: '和合本 (CUV)' }, { id: 'zh-lzz', label: '呂振中 (LZZ)' }, { id: 'zh-ncv', label: '新譯本 (NCV)' },
-                                  { id: 'en-niv', label: 'NIV' }, { id: 'en-nasb', label: 'NASB' }, { id: 'en-kjv', label: 'KJV' },
-                                  { id: 'orig-wlc', label: 'WLC 原文 (希伯來文)' }, { id: 'orig-lxx', label: 'LXX 譯本 (希臘文)' }, { id: 'orig-na28', label: 'NA28 新約 (希臘文)' },
-                                  { id: 'dict-lxx-strongs', label: 'LXX 七十士字典' },
-                                  { id: 'morph-wlc', label: 'WLC 精確字義與形態學 (11檔)' },
-                                  { id: 'morph-na28', label: 'NA28 形態學數據庫 (3檔)' }
-                                ].map(ver => (
-                                   <div key={ver.id} className="flex justify-between items-center text-xs p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 transition-colors">
-                                      <span className="font-bold text-slate-700 dark:text-slate-300 text-[11px]">{ver.label}</span>
-                                      
-                                      {loadedBibles[ver.id] ? (
-                                          <div className="flex items-center gap-2 shrink-0">
-                                              <span className="text-emerald-500 font-black flex items-center gap-0.5"><Check className="w-3 h-3"/> 已載入</span>
-                                              <button 
-                                                  onClick={() => handleDeleteVersion(ver.id, ver.label)}
-                                                  className="w-5 h-5 flex items-center justify-center rounded-md bg-red-50 dark:bg-red-950/40 text-red-500 hover:bg-red-500 hover:text-white active:scale-90 transition-all shadow-sm"
-                                                  title="單獨刪除此項目"
-                                              >
-                                                  <X className="w-3 h-3" />
-                                              </button>
-                                          </div>
-                                      ) : (
-                                          <span className="text-slate-400 shrink-0">尚未匯入</span>
-                                      )}
-                                   </div>
-                                ))}
-                             </div>
-
-                             {/* ☁️ 雲端一鍵下載區塊 */}
-                             <div className="flex flex-col gap-3 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/50 rounded-xl">
-                                <select value={importTarget} onChange={e => setImportTarget(e.target.value)} className="p-3 rounded-lg text-sm font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none text-indigo-700 dark:text-indigo-300">
-                                   <option value="zh-cuv">匯入為：和合本 (CUV)</option>
-                                   <option value="zh-lzz">匯入為：呂振中 (LZZ)</option>
-                                   <option value="zh-ncv">匯入為：新譯本 (CNV/NCV)</option>
-                                   <option value="en-niv">匯入為：NIV</option>
-                                   <option value="en-nasb">匯入為：NASB</option>
-                                   <option value="en-kjv">匯入為：KJV</option>
-                                   <option value="orig-wlc">匯入為：WLC 原文 (希伯來文)</option>
-                                   <option value="orig-lxx">匯入為：LXX 七十士譯本 (希臘文)</option>
-                                   <option value="orig-na28">匯入為：NA28 新約原文 (希臘文)</option>
-                                   <option value="dict-lxx-strongs">匯入為：LXX 七十士字典 (lxx_dictionary.json)</option>
-                                   <option value="morph-wlc">匯入為：WLC 精確字義與形態學 (共 11 個分割檔)</option>
-                                   <option value="morph-na28">匯入為：NA28 新約形態學與文法資料庫 (共 3 個分割檔)</option>
-                                </select>
-                                
-                                <div className="flex gap-2">
-                                   <button 
-                                     onClick={fetchCloudData}
-                                     disabled={importing}
-                                     className="flex-1 flex justify-center items-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-black text-sm hover:bg-indigo-700 transition-colors disabled:opacity-50 active:scale-95"
-                                   >
-                                     {importing ? <Loader className="w-4 h-4 animate-spin" /> : <CloudDownload className="w-4 h-4" />}
-                                     {importing ? '下載中...' : '從 GitHub 雲端下載'}
-                                   </button>
-                                   
-                                   {/* 手動上傳作為後備 */}
-                                   <div className="relative flex-1">
-                                      <input type="file" accept=".json" onChange={handleFileUpload} disabled={importing} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed" />
-                                      <div className={`w-full h-full flex items-center justify-center gap-2 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl font-black text-sm transition-colors ${importing ? 'opacity-50' : 'hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer active:scale-95'}`}>
-                                         <Upload className="w-4 h-4" /> 本地上傳
-                                      </div>
-                                   </div>
-                                </div>
-                             </div>
-
-                             <button onClick={async () => { if(window.confirm('警告：這將會清除您手機中的「所有」聖經與字典數據！確定要繼續嗎？')) { await clearDB(); setLoadedBibles({}); setToastMsg('整個資料庫已重置清空'); } }} className="mt-6 w-full py-3 text-xs font-bold text-red-500 hover:text-red-600 bg-red-50 dark:bg-red-900/20 rounded-xl transition-colors">
-                                清除所有已匯入資料 (重置資料庫)
-                             </button>
-                          </div>
+                 <div className="flex gap-1 shrink-0">
+                    {activeTab === 'read' ? (
+                       <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 h-[34px] items-center">
+                          <button onClick={() => setReadingMode('verse')} className={`p-1 rounded-md ${readingMode === 'verse' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}><AlignLeft className="w-3.5 h-3.5"/></button>
+                          <button onClick={() => setReadingMode('paragraph')} className={`p-1 rounded-md ${readingMode === 'paragraph' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}><AlignJustify className="w-3.5 h-3.5"/></button>
                        </div>
-                    </div>
-                 )}
-              </main>
+                    ) : activeTab === 'compare' ? (
+                       <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 h-[34px] items-center">
+                          <button onClick={() => setLayoutMode('vertical')} className={`p-1 rounded-md ${layoutMode === 'vertical' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}><List className="w-3.5 h-3.5" /></button>
+                          <button onClick={() => setLayoutMode('horizontal')} className={`p-1 rounded-md ${layoutMode === 'horizontal' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}><Columns className="w-3.5 h-3.5" /></button>
+                       </div>
+                    ) : null}
+                    <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-[34px] h-[34px] flex items-center justify-center rounded-lg border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+                       {isDarkMode ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-slate-500" />}
+                    </button>
+                 </div>
+              </div>
+            </header>
 
-              {/* 🛸 完美升級：全分頁通用「懸浮觸控滑動艙」（跨分頁自適應拖拽面板） */}
-              {floatPos.x !== -100 && (
-                  <div 
-                      style={{ left: `${floatPos.x}px`, top: `${floatPos.y}px` }}
-                      onPointerDown={handlePointerDown}
-                      onPointerMove={handlePointerMove}
-                      onPointerUp={handlePointerUp}
-                      className={`fixed z-[140] w-12 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xl flex flex-col items-center py-2 select-none touch-none transition-shadow ${isDragging ? 'shadow-indigo-500/20 ring-2 ring-indigo-500/30 cursor-grabbing' : 'cursor-grab'}`}
-                  >
-                      {/* 上翻頁按鈕 */}
-                      <button 
-                          onPointerDown={(e) => e.stopPropagation()} 
-                          onClick={() => mainRef.current?.scrollBy({ top: -window.innerHeight * 0.4, behavior: 'smooth' })}
-                          className="w-9 h-9 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full flex items-center justify-center hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 transition-all active:scale-90"
-                      >
-                          <ChevronDown className="w-5 h-5 rotate-180" />
-                      </button>
-
-                      {/* 艙體中央拖拽安全防滑刻紋 */}
-                      <div className="flex flex-col gap-0.5 my-2.5 justify-center items-center opacity-40 pointer-events-none">
-                          <div className="w-4 h-[2px] bg-slate-400 dark:bg-slate-500 rounded-full"></div>
-                          <div className="w-4 h-[2px] bg-slate-400 dark:bg-slate-500 rounded-full"></div>
-                          <div className="w-4 h-[2px] bg-slate-400 dark:bg-slate-500 rounded-full"></div>
-                      </div>
-
-                      {/* 下翻頁按鈕 */}
-                      <button 
-                          onPointerDown={(e) => e.stopPropagation()} 
-                          onClick={() => mainRef.current?.scrollBy({ top: window.innerHeight * 0.4, behavior: 'smooth' })}
-                          className="w-9 h-9 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full flex items-center justify-center hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 transition-all active:scale-90"
-                      >
-                          <ChevronDown className="w-5 h-5" />
-                      </button>
-                  </div>
-              )}
-
-              {/* 浮動快捷導航列 (僅在讀經與對照分頁顯示) */}
-              {(activeTab === 'read' || activeTab === 'compare') && !fetching && (
-                <div className="fixed bottom-[105px] left-0 right-0 px-4 max-w-lg mx-auto z-40">
-                   <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 p-1.5 rounded-2xl shadow-lg flex gap-1.5">
-                      <button onClick={handlePrevChapter} className="flex-[1.2] py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-black text-xs flex items-center justify-center gap-1 active:scale-95 transition-transform">
-                         <ChevronLeft className="w-4 h-4" /> 上一章
-                      </button>
-                      <div className="flex-[0.8] relative flex">
-                         <select value={viewState.chapter} onChange={(e) => setViewState(v => ({ ...v, chapter: parseInt(e.target.value) }))} className="w-full appearance-none bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800/50 rounded-xl text-indigo-500 dark:text-indigo-400 font-black text-[11px] text-center outline-none cursor-pointer py-2.5" style={{ textAlignLast: 'center' }}>
-                            {Array.from({ length: [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT].find(b => b.id === viewState.bookId).chapters }, (_, i) => i + 1).map(ch => (
-                               <option key={ch} value={ch}>CH {ch}</option>
+            {/* 主內容區 */}
+            <main ref={mainRef} className="flex-1 overflow-y-auto max-w-lg mx-auto w-full relative no-scrollbar">
+               {activeTab === 'home' && (
+                  <div className="px-6 py-10 flex flex-col h-full animate-in fade-in">
+                     <div className="flex flex-col items-center justify-center py-10 gap-4 mb-8 border-b border-slate-200 dark:border-slate-800 pb-12">
+                        <div className="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center shadow-lg relative">
+                           <Book className="w-10 h-10 text-white" />
+                           <Sparkles className="absolute -top-2 -right-2 text-amber-400 w-6 h-6 animate-pulse" />
+                        </div>
+                        <h1 className="text-xl font-black tracking-widest text-slate-800 dark:text-slate-100 uppercase mt-2">Bible Explorer</h1>
+                        <p className="text-[10px] font-bold text-slate-400">聖經原文對照探索器</p>
+                     </div>
+                     <div className="flex-1">
+                        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Bookmark className="w-4 h-4"/> 最近書籤</h3>
+                        {bookmarks.length > 0 ? (
+                          <div className="space-y-3 pb-20">
+                            {bookmarks.slice(-10).reverse().map(b => (
+                              <div key={b.id} onClick={() => { setViewState({ book: b.book, bookId: b.bookId, chapter: b.chapter }); setActiveTab('read'); }} className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm cursor-pointer">
+                                 <div className="flex justify-between items-start mb-2">
+                                    <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400">{b.book} {b.chapter}:{b.verse}</span>
+                                    <button onClick={(e) => { e.stopPropagation(); toggleBookmark({verseNum: b.verse}); }} className="text-slate-300 hover:text-red-500"><X className="w-4 h-4"/></button>
+                                 </div>
+                                 <div className="text-sm font-bold text-slate-700 dark:text-slate-300 line-clamp-2">{b.text}</div>
+                              </div>
                             ))}
-                         </select>
-                         <ChevronDown className="w-3 h-3 text-indigo-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          </div>
+                        ) : (
+                          <div className="py-10 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl text-center text-xs text-slate-400 font-bold bg-white dark:bg-slate-900">尚無書籤，讀經時點擊書籤圖示即可加入</div>
+                        )}
+                     </div>
+                  </div>
+               )}
+
+               {activeTab === 'read' && (
+                  <div className="px-4 py-6 pb-40">
+                     {fetching ? (
+                        <div className="flex flex-col items-center justify-center py-32 text-indigo-400 gap-4">
+                           <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                     ) : (
+                        <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-sm text-justify">
+                           {readingMode === 'verse' ? (
+                             <div className="space-y-4">
+                               {verses.map(v => (
+                                 <div key={v.verseNum} className="relative group">
+                                    <div className="flex items-start">
+                                       <span className="text-indigo-500 font-black mr-2 text-[11px] px-1.5 py-0.5 rounded shrink-0 relative top-[2px]">{v.verseNum}</span>
+                                       {readVersion.startsWith('orig') ? renderOriginal(v, readVersion, fontSize, false) : (
+                                          <span style={{ fontSize: `${fontSize}px` }} className="text-slate-800 dark:text-slate-200 font-medium leading-relaxed flex-1">{getVerseText(v, readVersion)}</span>
+                                       )}
+                                       <button onClick={() => toggleBookmark(v)} className={`ml-2 p-1 rounded-full shrink-0 ${isBookmarked(v.verseNum) ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' : 'text-slate-200 dark:text-slate-700'}`}>
+                                          {isBookmarked(v.verseNum) ? <LucideIcon name="bookmark-check" className="w-4 h-4"/> : <Bookmark className="w-4 h-4"/>}
+                                       </button>
+                                    </div>
+                                 </div>
+                               ))}
+                             </div>
+                           ) : (
+                             <>
+                               {verses.map((v, idx) => (
+                                 <Fragment key={v.verseNum}>
+                                    {(v.paragraphStart && idx !== 0) && <div className="w-full h-1.5 flex shrink-0"></div>}
+                                    <span className="inline">
+                                       <span className="text-indigo-500 font-black mx-1 text-[11px] px-1.5 py-0.5 rounded relative bottom-[2px]">{v.verseNum}</span>
+                                       {readVersion.startsWith('orig') ? renderOriginal(v, readVersion, fontSize, true) : (
+                                          <span style={{ fontSize: `${fontSize}px` }} className="text-slate-800 dark:text-slate-200 font-medium leading-loose">{getVerseText(v, readVersion)}</span>
+                                       )}
+                                       <button onClick={() => toggleBookmark(v)} className={`inline-flex align-middle mx-1 -mt-1 ${isBookmarked(v.verseNum) ? 'text-amber-500' : 'text-slate-200 dark:text-slate-700'}`}>
+                                          {isBookmarked(v.verseNum) ? <LucideIcon name="bookmark-check" className="w-3.5 h-3.5"/> : <Bookmark className="w-3.5 h-3.5"/>}
+                                       </button>
+                                    </span>
+                                 </Fragment>
+                               ))}
+                             </>
+                           )}
+                        </div>
+                     )}
+                  </div>
+               )}
+
+               {activeTab === 'compare' && (
+                  <div className="px-4 py-6 space-y-5 pb-40">
+                     {fetching ? (
+                        <div className="flex flex-col items-center justify-center py-32"><div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div></div>
+                     ) : (
+                        verses.map(verse => (
+                        <div key={verse.verseNum} className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+                           <div className="px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+                              <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Verse {verse.verseNum}</span>
+                              <button onClick={() => toggleBookmark(verse)} className={isBookmarked(verse.verseNum) ? 'text-amber-500' : 'text-slate-300 dark:text-slate-600'}>
+                                 {isBookmarked(verse.verseNum) ? <LucideIcon name="bookmark-check" className="w-4 h-4"/> : <Bookmark className="w-4 h-4"/>}
+                              </button>
+                           </div>
+                           <div className="p-4 sm:p-5">
+                              {layoutMode === 'vertical' ? (
+                                 <div className="space-y-4">
+                                    {verticalSlots.map((slot, sIdx) => (
+                                       <div key={sIdx} className={sIdx > 0 ? "pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-2" : "flex flex-col sm:flex-row gap-2"}>
+                                          <div className="flex flex-col gap-1.5 mb-1 shrink-0 w-auto sm:w-24">
+                                             <select value={slot} onChange={(e) => { const n = [...verticalSlots]; n[sIdx] = e.target.value; setVerticalSlots(n); }} className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-transparent border-none p-0 cursor-pointer outline-none">
+                                                <optgroup label="中文"><option value="zh-cuv">和合本</option><option value="zh-lzz">呂振中</option><option value="zh-ncv">新譯本</option></optgroup>
+                                                <optgroup label="英文"><option value="en-niv">NIV</option><option value="en-nasb">NASB</option><option value="en-kjv">KJV</option></optgroup>
+                                                <optgroup label="原文">
+                                                   {currentIsOT ? (
+                                                       <Fragment>
+                                                           <option value="orig-wlc">WLC 希伯來文</option>
+                                                           <option value="orig-lxx">LXX 七十士</option>
+                                                       </Fragment>
+                                                   ) : (
+                                                       <option value="orig-na28">NA28 新約</option>
+                                                   )}
+                                                </optgroup>
+                                             </select>
+                                          </div>
+                                          <div className="flex-1 w-full">
+                                             {slot.startsWith('orig') ? renderOriginal(verse, slot, fontSize, false) : (
+                                                <p style={{ fontSize: `${fontSize}px` }} className={`w-full ${slot.startsWith('en') ? 'italic font-serif text-slate-600 dark:text-slate-400' : 'font-bold text-slate-800 dark:text-slate-200'} leading-relaxed`}>{getVerseText(verse, slot)}</p>
+                                             )}
+                                          </div>
+                                       </div>
+                                    ))}
+                                 </div>
+                              ) : (
+                                 <div className="grid grid-cols-3 gap-2 min-w-0 w-full overflow-hidden">
+                                    <div className="border-r border-slate-100 dark:border-slate-800 pr-1.5 flex flex-col min-w-0">
+                                       <div className="mb-2 shrink-0">
+                                          <select value={horizVersions.zh} onChange={e => setHorizVersions({...horizVersions, zh: e.target.value})} className="text-[9px] font-black text-slate-500 bg-slate-100 dark:bg-slate-800 rounded py-0.5 px-1 outline-none cursor-pointer max-w-full truncate">
+                                             <option value="cuv">和合本</option><option value="lzz">呂振中</option><option value="ncv">新譯本</option>
+                                          </select>
+                                       </div>
+                                       <p style={{ fontSize: `${Math.max(11, fontSize - 3)}px` }} className="font-bold text-slate-800 dark:text-slate-200 leading-relaxed break-all">{verse.chinese[horizVersions.zh] || "尚未匯入"}</p>
+                                    </div>
+                                    
+                                    <div className="border-r border-slate-100 dark:border-slate-800 pr-1.5 flex flex-col min-w-0">
+                                       <div className="mb-2 shrink-0">
+                                          <select value={horizVersions.en} onChange={e => setHorizVersions({...horizVersions, en: e.target.value})} className="text-[9px] font-black text-slate-500 bg-slate-100 dark:bg-slate-800 rounded py-0.5 px-1 outline-none cursor-pointer max-w-full truncate">
+                                             <option value="niv">NIV</option><option value="nasb">NASB</option><option value="kjv">KJV</option>
+                                          </select>
+                                       </div>
+                                       <p style={{ fontSize: `${Math.max(11, fontSize - 3)}px` }} className="italic font-serif text-slate-600 dark:text-slate-400 leading-relaxed break-all">{verse.english[horizVersions.en] || "尚未匯入"}</p>
+                                    </div>
+                                    
+                                    <div className="flex flex-col min-w-0">
+                                       <div className="mb-2 shrink-0">
+                                          <select value={horizVersions.orig} onChange={e => setHorizVersions({...horizVersions, orig: e.target.value})} className="text-[9px] font-black text-amber-600 bg-amber-50 dark:bg-amber-900/20 rounded py-0.5 px-1 outline-none cursor-pointer max-w-full truncate">
+                                             {currentIsOT ? (
+                                                 <Fragment>
+                                                     <option value="orig-wlc">WLC 希伯來</option>
+                                                     <option value="orig-lxx">LXX 七十士</option>
+                                                 </Fragment>
+                                             ) : (
+                                                 <option value="orig-na28">NA28 新約</option>
+                                             )}
+                                          </select>
+                                       </div>
+                                       <div className="w-full min-w-0 break-all">{renderOriginal(verse, horizVersions.orig, Math.max(11, fontSize - 3), false)}</div>
+                                    </div>
+                                 </div>
+                              )}
+                           </div>
+                        </div>
+                        ))
+                     )}
+                  </div>
+               )}
+
+               {/* 搜尋分頁 */}
+               {activeTab === 'search' && (
+                  <div className="px-4 py-6 flex flex-col h-full animate-in fade-in pb-40">
+                      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm sticky top-0 z-10 flex gap-2 mb-4">
+                          <input 
+                              value={bibleSearchQuery}
+                              onChange={e => handleBibleSearch(e.target.value)}
+                              className="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-slate-200 outline-none focus:border-indigo-500"
+                              placeholder={`在目前 [${readVersion.toUpperCase()}] 譯本中搜尋字眼...`}
+                          />
+                          <div className="w-12 h-12 shrink-0 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
+                              <Search className="w-5 h-5" />
+                          </div>
                       </div>
-                      <button onClick={handleNextChapter} className="flex-[1.2] py-2.5 bg-indigo-600 rounded-xl text-white font-black text-xs flex items-center justify-center gap-1 shadow-md active:scale-95 transition-transform">
-                         下一章 <ChevronDown className="w-4 h-4 -rotate-90" />
-                      </button>
-                   </div>
+
+                      <div className="flex-1 overflow-y-auto no-scrollbar space-y-3">
+                          {!loadedBibles[readVersion] ? (
+                              <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs font-bold text-center py-20">
+                                  當前選擇的譯本 [{readVersion.toUpperCase()}] 尚未有經文，<br/>請先到設定頁面匯入 JSON 檔。
+                              </div>
+                          ) : bibleSearchQuery.trim() === "" ? (
+                              <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs font-bold text-center py-20">
+                                  請輸入文字關鍵字開始全面檢索聖經。
+                              </div>
+                          ) : bibleSearchResults.length === 0 ? (
+                              <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs font-bold text-center py-20">
+                                  找不到包含「{bibleSearchQuery}」的經文節數。
+                              </div>
+                          ) : (
+                              <>
+                                  <div className="text-[11px] font-black text-slate-400 px-1 uppercase tracking-wider">找到 {bibleSearchResults.length === 80 ? '80+' : bibleSearchResults.length} 處相符經文：</div>
+                                  {bibleSearchResults.map(res => (
+                                      <div 
+                                          key={res.id} 
+                                          onClick={() => {
+                                              setViewState({ book: res.bookName, bookId: res.bookId, chapter: res.chapter });
+                                              setActiveTab('read');
+                                          }}
+                                          className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm cursor-pointer hover:border-indigo-400 active:scale-[0.99] transition-all"
+                                      >
+                                          <div className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 mb-1">{res.bookName} 第 {res.chapter} 章 {res.verse} 節</div>
+                                          <div style={{ fontSize: `${fontSize}px` }} className="text-slate-800 dark:text-slate-200 leading-relaxed font-medium">{res.text}</div>
+                                      </div>
+                                  ))}
+                              </>
+                          )}
+                      </div>
+                  </div>
+               )}
+
+               {activeTab === 'settings' && (
+                  <div className="px-6 py-10 flex flex-col h-full animate-in fade-in overflow-y-auto pb-40 no-scrollbar">
+                     <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-widest uppercase mb-8">Settings</h2>
+                     <div className="space-y-6">
+                        {/* 深色模式 */}
+                        <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
+                           <div className="flex justify-between items-center">
+                              <div className="flex items-center gap-4">
+                                 <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center">
+                                    {isDarkMode ? <Moon className="w-3.5 h-3.5 text-indigo-400" /> : <Sun className="w-3.5 h-3.5 text-amber-500" />}
+                                 </div>
+                                 <div>
+                                    <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm">深色模式 (Dark Mode)</h3>
+                                 </div>
+                              </div>
+                              <button onClick={() => setIsDarkMode(!isDarkMode)} className={`w-14 h-8 rounded-full relative flex items-center px-1 ${isDarkMode ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700'}`}>
+                                 <div className={`w-6 h-6 bg-white rounded-full shadow transition-transform duration-300 ${isDarkMode ? 'translate-x-6' : 'translate-x-0'}`} />
+                              </button>
+                           </div>
+                        </div>
+
+                        {/* 本地資料庫管理 */}
+                        <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
+                           <div className="flex items-center gap-3 mb-6">
+                              <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center"><Database className="w-5 h-5 text-indigo-600"/></div>
+                              <div>
+                                 <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm">本地資料庫 (Local Database)</h3>
+                                 <p className="text-xs text-slate-500 mt-0.5">管理手機內部離線聖經儲存</p>
+                              </div>
+                           </div>
+                           
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6">
+                              {[
+                                { id: 'zh-cuv', label: '和合本 (CUV)' }, { id: 'zh-lzz', label: '呂振中 (LZZ)' }, { id: 'zh-ncv', label: '新譯本 (NCV)' },
+                                { id: 'en-niv', label: 'NIV' }, { id: 'en-nasb', label: 'NASB' }, { id: 'en-kjv', label: 'KJV' },
+                                { id: 'orig-wlc', label: 'WLC 原文 (希伯來文)' }, { id: 'orig-lxx', label: 'LXX 譯本 (希臘文)' }, { id: 'orig-na28', label: 'NA28 新約 (希臘文)' },
+                                { id: 'dict-lxx-strongs', label: 'LXX 七十士字典' },
+                                { id: 'morph-wlc', label: 'WLC 精確字義與形態學 (11檔)' },
+                                { id: 'morph-na28', label: 'NA28 形態學數據庫 (3檔)' }
+                              ].map(ver => (
+                                 <div key={ver.id} className="flex justify-between items-center text-xs p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 transition-colors">
+                                    <span className="font-bold text-slate-700 dark:text-slate-300 text-[11px]">{ver.label}</span>
+                                    
+                                    {loadedBibles[ver.id] ? (
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <span className="text-emerald-500 font-black flex items-center gap-0.5"><Check className="w-3 h-3"/> 已載入</span>
+                                            <button 
+                                                onClick={() => handleDeleteVersion(ver.id, ver.label)}
+                                                className="w-5 h-5 flex items-center justify-center rounded-md bg-red-50 dark:bg-red-950/40 text-red-500 hover:bg-red-500 hover:text-white active:scale-90 transition-all shadow-sm"
+                                                title="單獨刪除此項目"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <span className="text-slate-400 shrink-0">尚未匯入</span>
+                                    )}
+                                 </div>
+                              ))}
+                           </div>
+
+                           {/* ☁️ 雲端一鍵下載區塊 */}
+                           <div className="flex flex-col gap-3 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/50 rounded-xl">
+                              <select value={importTarget} onChange={e => setImportTarget(e.target.value)} className="p-3 rounded-lg text-sm font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none text-indigo-700 dark:text-indigo-300">
+                                 <option value="zh-cuv">匯入為：和合本 (CUV)</option>
+                                 <option value="zh-lzz">匯入為：呂振中 (LZZ)</option>
+                                 <option value="zh-ncv">匯入為：新譯本 (CNV/NCV)</option>
+                                 <option value="en-niv">匯入為：NIV</option>
+                                 <option value="en-nasb">匯入為：NASB</option>
+                                 <option value="en-kjv">匯入為：KJV</option>
+                                 <option value="orig-wlc">匯入為：WLC 原文 (希伯來文)</option>
+                                 <option value="orig-lxx">匯入為：LXX 七十士譯本 (希臘文)</option>
+                                 <option value="orig-na28">匯入為：NA28 新約原文 (希臘文)</option>
+                                 <option value="dict-lxx-strongs">匯入為：LXX 七十士字典 (lxx_dictionary.json)</option>
+                                 <option value="morph-wlc">匯入為：WLC 精確字義與形態學 (共 11 個分割檔)</option>
+                                 <option value="morph-na28">匯入為：NA28 新約形態學與文法資料庫 (共 3 個分割檔)</option>
+                              </select>
+                              
+                              <div className="flex gap-2">
+                                 <button 
+                                   onClick={fetchCloudData}
+                                   disabled={importing}
+                                   className="flex-1 flex justify-center items-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-black text-sm hover:bg-indigo-700 transition-colors disabled:opacity-50 active:scale-95"
+                                 >
+                                   {importing ? <Loader className="w-4 h-4 animate-spin" /> : <CloudDownload className="w-4 h-4" />}
+                                   {importing ? '下載中...' : '從 GitHub 雲端下載'}
+                                 </button>
+                                 
+                                 {/* 手動上傳作為後備 */}
+                                 <div className="relative flex-1">
+                                    <input type="file" accept=".json" onChange={handleFileUpload} disabled={importing} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed" />
+                                    <div className={`w-full h-full flex items-center justify-center gap-2 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl font-black text-sm transition-colors ${importing ? 'opacity-50' : 'hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer active:scale-95'}`}>
+                                       <Upload className="w-4 h-4" /> 本地上傳
+                                    </div>
+                                 </div>
+                              </div>
+                           </div>
+
+                           <button onClick={async () => { if(window.confirm('警告：這將會清除您手機中的「所有」聖經與字典數據！確定要繼續嗎？')) { await clearDB(); setLoadedBibles({}); setToastMsg('整個資料庫已重置清空'); } }} className="mt-6 w-full py-3 text-xs font-bold text-red-500 hover:text-red-600 bg-red-50 dark:bg-red-900/20 rounded-xl transition-colors">
+                              清除所有已匯入資料 (重置資料庫)
+                           </button>
+                        </div>
+                     </div>
+                  </div>
+               )}
+            </main>
+
+            {/* 🛸 完美升級：全分頁通用「懸浮觸控滑動艙」（跨分頁自適應拖拽面板） */}
+            {floatPos.x !== -100 && (
+                <div 
+                    style={{ left: `${floatPos.x}px`, top: `${floatPos.y}px` }}
+                    onPointerDown={handlePointerDown}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    className={`fixed z-[140] w-12 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xl flex flex-col items-center py-2 select-none touch-none transition-shadow ${isDragging ? 'shadow-indigo-500/20 ring-2 ring-indigo-500/30 cursor-grabbing' : 'cursor-grab'}`}
+                >
+                    {/* 上翻頁按鈕 */}
+                    <button 
+                        onPointerDown={(e) => e.stopPropagation()} 
+                        onClick={() => mainRef.current?.scrollBy({ top: -window.innerHeight * 0.4, behavior: 'smooth' })}
+                        className="w-9 h-9 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full flex items-center justify-center hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 transition-all active:scale-90"
+                    >
+                        <ChevronDown className="w-5 h-5 rotate-180" />
+                    </button>
+
+                    {/* 艙體中央拖拽安全防滑刻紋 */}
+                    <div className="flex flex-col gap-0.5 my-2.5 justify-center items-center opacity-40 pointer-events-none">
+                        <div className="w-4 h-[2px] bg-slate-400 dark:bg-slate-500 rounded-full"></div>
+                        <div className="w-4 h-[2px] bg-slate-400 dark:bg-slate-500 rounded-full"></div>
+                        <div className="w-4 h-[2px] bg-slate-400 dark:bg-slate-500 rounded-full"></div>
+                    </div>
+
+                    {/* 下翻頁按鈕 */}
+                    <button 
+                        onPointerDown={(e) => e.stopPropagation()} 
+                        onClick={() => mainRef.current?.scrollBy({ top: window.innerHeight * 0.4, behavior: 'smooth' })}
+                        className="w-9 h-9 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full flex items-center justify-center hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 transition-all active:scale-90"
+                    >
+                        <ChevronDown className="w-5 h-5" />
+                    </button>
                 </div>
-              )}
+            )}
 
-              {/* 底部五向主導航列 */}
-              <nav className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 pt-2.5 pb-9 grid grid-cols-5 sticky bottom-0 z-50 shadow-[0_-10px_20px_rgba(0,0,0,0.03)] shrink-0">
-                 <TabButton active={activeTab === 'home'} onClick={() => setActiveTab('home')} icon={<Home className="w-5 h-5" />} label="主頁" />
-                 <TabButton active={activeTab === 'read'} onClick={() => setActiveTab('read')} icon={<Book className="w-5 h-5" />} label="讀經" />
-                 <TabButton active={activeTab === 'compare'} onClick={() => setActiveTab('compare')} icon={<Layers className="w-5 h-5" />} label="對照" />
-                 <TabButton active={activeTab === 'search'} onClick={() => setActiveTab('search')} icon={<Search className="w-5 h-5" />} label="搜尋" />
-                 <TabButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<LucideIcon name="settings" className="w-5 h-5" />} label="設定" />
-              </nav>
-            </div>
-          );
-        };
+            {/* 浮動快捷導航列 (僅在讀經與對照分頁顯示) */}
+            {(activeTab === 'read' || activeTab === 'compare') && !fetching && (
+              <div className="fixed bottom-[105px] left-0 right-0 px-4 max-w-lg mx-auto z-40">
+                 <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 p-1.5 rounded-2xl shadow-lg flex gap-1.5">
+                    <button onClick={handlePrevChapter} className="flex-[1.2] py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-black text-xs flex items-center justify-center gap-1 active:scale-95 transition-transform">
+                       <ChevronLeft className="w-4 h-4" /> 上一章
+                    </button>
+                    <div className="flex-[0.8] relative flex">
+                       <select value={viewState.chapter} onChange={(e) => setViewState(v => ({ ...v, chapter: parseInt(e.target.value) }))} className="w-full appearance-none bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800/50 rounded-xl text-indigo-500 dark:text-indigo-400 font-black text-[11px] text-center outline-none cursor-pointer py-2.5" style={{ textAlignLast: 'center' }}>
+                          {Array.from({ length: [...BIBLE_STRUCTURE.OT, ...BIBLE_STRUCTURE.NT].find(b => b.id === viewState.bookId).chapters }, (_, i) => i + 1).map(ch => (
+                             <option key={ch} value={ch}>CH {ch}</option>
+                          ))}
+                       </select>
+                       <ChevronDown className="w-3 h-3 text-indigo-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+                    <button onClick={handleNextChapter} className="flex-[1.2] py-2.5 bg-indigo-600 rounded-xl text-white font-black text-xs flex items-center justify-center gap-1 shadow-md active:scale-95 transition-transform">
+                       下一章 <ChevronDown className="w-4 h-4 -rotate-90" />
+                    </button>
+                 </div>
+              </div>
+            )}
 
-        const TabButton = ({ active, icon, label, onClick }) => (
-          <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>
-            <div className={`p-1.5 rounded-xl ${active ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''}`}>{icon}</div>
-            <span className="text-[9px] font-black tracking-tight">{label}</span>
-          </button>
+            {/* 底部五向主導航列 */}
+            <nav className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 pt-2.5 pb-9 grid grid-cols-5 sticky bottom-0 z-50 shadow-[0_-10px_20px_rgba(0,0,0,0.03)] shrink-0">
+               <TabButton active={activeTab === 'home'} onClick={() => setActiveTab('home')} icon={<Home className="w-5 h-5" />} label="主頁" />
+               <TabButton active={activeTab === 'read'} onClick={() => setActiveTab('read')} icon={<Book className="w-5 h-5" />} label="讀經" />
+               <TabButton active={activeTab === 'compare'} onClick={() => setActiveTab('compare')} icon={<Layers className="w-5 h-5" />} label="對照" />
+               <TabButton active={activeTab === 'search'} onClick={() => setActiveTab('search')} icon={<Search className="w-5 h-5" />} label="搜尋" />
+               <TabButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<LucideIcon name="settings" className="w-5 h-5" />} label="設定" />
+            </nav>
+          </div>
         );
+      };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+      const TabButton = ({ active, icon, label, onClick }) => (
+        <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>
+          <div className={`p-1.5 rounded-xl ${active ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''}`}>{icon}</div>
+          <span className="text-[9px] font-black tracking-tight">{label}</span>
+        </button>
+      );
+
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
     </script>
 </body>
 </html>
